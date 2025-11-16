@@ -1,7 +1,7 @@
-fastapi>=0.111.0
-uvicorn[standard]>=0.30.0
-sqlmodel>=0.0.16
-pydantic>=2.7
-pandas>=2.2
-yfinance>=0.2.40
-apscheduler>=3.10
+fastapi>=0.115.5
+uvicorn[standard]>=0.32.0
+sqlmodel>=0.0.21
+pydantic>=2.9.2
+pandas>=2.2.3
+yfinance>=0.2.43
+apscheduler>=3.10.4
