@@ -1,0 +1,47 @@
+<script setup lang="ts">
+import { useQuery } from '@tanstack/vue-query';
+import MarketHeader from './components/MarketHeader.vue';
+import Sp500PriceVolumeChart from './components/Sp500PriceVolumeChart.vue';
+import SectorTable from './components/SectorTable.vue';
+import Mag7RelativeChart from './components/Mag7RelativeChart.vue';
+import Mag7DailyBars from './components/Mag7DailyBars.vue';
+import MultiAssetComparisonChart from './components/MultiAssetComparisonChart.vue';
+import { fetchMarketSummary } from './services/api';
+
+const { data: sp500Summary } = useQuery({
+  queryKey: ['market', 'sp500'],
+  queryFn: () => fetchMarketSummary('sp500'),
+  refetchInterval: 60_000,
+});
+
+const { data: nasdaqSummary } = useQuery({
+  queryKey: ['market', 'nasdaq100'],
+  queryFn: () => fetchMarketSummary('nasdaq100'),
+  refetchInterval: 60_000,
+});
+</script>
+
+<template>
+  <div class="min-h-screen bg-background text-white px-4 md:px-10 py-8 space-y-10">
+    <section>
+      <MarketHeader title="Shepherd Capital Markets" subtitle="S&P500 Dashboard" :summary="sp500Summary" />
+    </section>
+
+    <section class="grid gap-6 xl:grid-cols-[2fr,1fr]">
+      <Sp500PriceVolumeChart />
+      <SectorTable />
+    </section>
+
+    <section class="space-y-4">
+      <MarketHeader title="NASDAQ 100 Dashboard" subtitle="Mag 7 Focus" variant="secondary" :summary="nasdaqSummary" />
+      <div class="grid gap-6 xl:grid-cols-2">
+        <Mag7RelativeChart />
+        <Mag7DailyBars />
+      </div>
+    </section>
+
+    <section>
+      <MultiAssetComparisonChart />
+    </section>
+  </div>
+</template>

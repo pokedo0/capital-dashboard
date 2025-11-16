@@ -1,0 +1,188 @@
+from __future__ import annotations
+
+from datetime import date
+from typing import Dict, List, Sequence
+
+from sqlalchemy import func
+from sqlmodel import Session, select
+
+from ..models.price import PriceRecord
+from ..schemas.market import (
+    MarketSummary,
+    OHLCVPoint,
+    SectorItem,
+    SectorSummaryResponse,
+    SeriesPayload,
+)
+from .time_ranges import resolve_range_end, resolve_range_start
+from .yahoo_client import fetch_and_store
+
+SECTOR_LABELS: Dict[str, str] = {
+    "XLC": "Comm Services",
+    "XLY": "Consumer D",
+    "XLP": "Consumer S",
+    "XLE": "Energy",
+    "XLF": "Financials",
+    "XLV": "Health Care",
+    "XLI": "Industrials",
+    "XLB": "Materials",
+    "VNQ": "Real Estate",
+    "XLK": "Tech",
+    "XLU": "Utilities",
+}
+
+
+def ensure_history(session: Session, symbol: str, start: date, end: date) -> None:
+    result = session.exec(
+        select(func.min(PriceRecord.trade_date), func.max(PriceRecord.trade_date)).where(
+            PriceRecord.symbol == symbol
+        )
+    ).first()
+    if not result or result[0] is None or result[0] > start or result[1] is None or result[1] < end:
+        fetch_and_store(session, symbol, start, end)
+
+
+def to_points(records: Sequence[PriceRecord]) -> List[OHLCVPoint]:
+    return [
+        OHLCVPoint(
+            time=record.trade_date,
+            open=record.open,
+            high=record.high,
+            low=record.low,
+            close=record.close,
+            volume=record.volume,
+        )
+        for record in sorted(records, key=lambda r: r.trade_date)
+    ]
+
+
+def get_ohlcv_series(session: Session, symbol: str, range_key: str) -> SeriesPayload:
+    start = resolve_range_start(range_key)
+    end = resolve_range_end()
+    ensure_history(session, symbol, start, end)
+    records = session.exec(
+        select(PriceRecord)
+        .where(PriceRecord.symbol == symbol)
+        .where(PriceRecord.trade_date.between(start, end))
+    ).all()
+    return SeriesPayload(symbol=symbol, points=to_points(records))
+
+
+def get_relative_performance(session: Session, symbols: List[str], range_key: str) -> List[Dict]:
+    payload: List[Dict] = []
+    start = resolve_range_start(range_key)
+    end = resolve_range_end()
+    for symbol in symbols:
+        ensure_history(session, symbol, start, end)
+        records = session.exec(
+            select(PriceRecord)
+            .where(PriceRecord.symbol == symbol)
+            .where(PriceRecord.trade_date.between(start, end))
+            .order_by(PriceRecord.trade_date)
+        ).all()
+        if not records:
+            continue
+        first_close = next((r.close for r in records if r.close), None)
+        if not first_close:
+            continue
+        series = []
+        for record in records:
+            if record.close is None:
+                continue
+            change_pct = ((record.close / first_close) - 1.0) * 100
+            series.append({"time": record.trade_date, "value": change_pct})
+        payload.append({"symbol": symbol, "points": series})
+    return payload
+
+
+def get_daily_performance(session: Session, symbols: List[str]) -> List[Dict]:
+    results: List[Dict] = []
+    for symbol in symbols:
+        ensure_history(session, symbol, resolve_range_start("1M"), resolve_range_end())
+        rows = _latest_two_records(session, symbol)
+        if len(rows) < 2 or rows[0].close is None or rows[1].close is None:
+            continue
+        change_pct = ((rows[0].close - rows[1].close) / rows[1].close) * 100 if rows[1].close else 0
+        results.append(
+            {
+                "symbol": symbol,
+                "change_pct": change_pct,
+                "latest_close": rows[0].close,
+            }
+        )
+    return results
+
+
+def _latest_two_records(session: Session, symbol: str) -> List[PriceRecord]:
+    return (
+        session.exec(
+            select(PriceRecord)
+            .where(PriceRecord.symbol == symbol)
+            .order_by(PriceRecord.trade_date.desc())
+            .limit(2)
+        )
+        .unique()
+        .all()
+    )
+
+
+def get_market_summary(session: Session, market: str) -> MarketSummary:
+    symbol = "SPY" if market.lower() == "sp500" else "QQQ"
+    ensure_history(session, symbol, resolve_range_start("1Y"), resolve_range_end())
+    rows = _latest_two_records(session, symbol)
+    if len(rows) < 2 or rows[0].close is None or rows[1].close is None:
+        raise ValueError("Insufficient data for market summary")
+    latest, previous = rows
+    day_change = latest.close - previous.close
+    day_change_pct = (day_change / previous.close) * 100 if previous.close else 0
+
+    vix_symbol = "VIX"
+    ensure_history(session, vix_symbol, resolve_range_start("1Y"), resolve_range_end())
+    vix_rows = _latest_two_records(session, vix_symbol)
+    if len(vix_rows) < 2 or vix_rows[0].close is None or vix_rows[1].close is None:
+        raise ValueError("Insufficient data for VIX summary")
+    vix_change = (
+        ((vix_rows[0].close - vix_rows[1].close) / vix_rows[1].close) * 100
+        if vix_rows[1].close
+        else 0
+    )
+
+    return MarketSummary(
+        market=market.upper(),
+        date=rows[0].trade_date,
+        index_value=rows[0].close,
+        day_change=day_change,
+        day_change_pct=day_change_pct,
+        vix_value=vix_rows[0].close,
+        vix_change_pct=vix_change,
+    )
+
+
+def get_sector_summary(session: Session) -> SectorSummaryResponse:
+    items: List[SectorItem] = []
+    for symbol, label in SECTOR_LABELS.items():
+        ensure_history(session, symbol, resolve_range_start("1Y"), resolve_range_end())
+        rows = _latest_two_records(session, symbol)
+        if len(rows) < 2 or rows[0].close is None or rows[1].close is None:
+            continue
+        change_pct = ((rows[0].close - rows[1].close) / rows[1].close) * 100 if rows[1].close else 0
+        volume_millions = (rows[0].volume or 0) / 1_000_000
+        volume_samples = session.exec(
+            select(PriceRecord)
+            .where(PriceRecord.symbol == symbol)
+            .order_by(PriceRecord.trade_date.desc())
+            .limit(60)
+        ).all()
+        filtered = [row.volume for row in volume_samples if row.volume]
+        avg = (sum(filtered) / len(filtered)) if filtered else 0
+        percent_of_avg = ((rows[0].volume or 0) / avg * 100) if avg else 0
+        items.append(
+            SectorItem(
+                name=label,
+                symbol=symbol,
+                change_pct=change_pct,
+                volume_millions=volume_millions,
+                percent_of_avg=percent_of_avg,
+            )
+        )
+    return SectorSummaryResponse(sectors=items)
