@@ -142,7 +142,10 @@ def api_market_summary(
     market: str = Query("sp500"), session: Session = Depends(get_session)
 ) -> MarketSummary:
     key = market.lower()
-    return market_cache.get_or_set(key, lambda: get_market_summary(session, market))
+    try:
+        return market_cache.get_or_set(key, lambda: get_market_summary(session, market))
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.get("/api/sectors/summary", response_model=SectorSummaryResponse)

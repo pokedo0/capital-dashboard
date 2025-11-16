@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+import logging
 from typing import Dict, List, Sequence
 
 from sqlalchemy import func
@@ -16,6 +17,8 @@ from ..schemas.market import (
 )
 from .time_ranges import resolve_range_end, resolve_range_start
 from .yahoo_client import fetch_and_store
+
+logger = logging.getLogger(__name__)
 
 SECTOR_LABELS: Dict[str, str] = {
     "XLC": "Comm Services",
@@ -136,7 +139,7 @@ def get_market_summary(session: Session, market: str) -> MarketSummary:
     day_change = latest.close - previous.close
     day_change_pct = (day_change / previous.close) * 100 if previous.close else 0
 
-    vix_symbol = "VIX"
+    vix_symbol = "^VIX"
     ensure_history(session, vix_symbol, resolve_range_start("1Y"), resolve_range_end())
     vix_rows = _latest_two_records(session, vix_symbol)
     if len(vix_rows) < 2 or vix_rows[0].close is None or vix_rows[1].close is None:

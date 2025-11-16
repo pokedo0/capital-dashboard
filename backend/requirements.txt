@@ -3,5 +3,5 @@ uvicorn[standard]>=0.32.0
 sqlmodel>=0.0.21
 pydantic>=2.9.2
 pandas>=2.2.3
-yfinance>=0.2.43
+yfinance>=0.2.66
 apscheduler>=3.10.4

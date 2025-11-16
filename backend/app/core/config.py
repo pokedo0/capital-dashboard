@@ -11,7 +11,7 @@ class Settings(BaseModel):
         default=[
             "SPY",
             "QQQ",
-            "VIX",
+            "^VIX",
             "^NDX",
             "XLC",
             "XLK",

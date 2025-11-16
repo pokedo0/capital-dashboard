@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 import logging
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 import yfinance as yf
@@ -35,6 +35,10 @@ def _download(symbol: str, start: date, end: date) -> pd.DataFrame:
     return data
 
 
+def _safe_float(value: Optional[float]) -> Optional[float]:
+    return float(value) if value is not None and pd.notna(value) else None
+
+
 def fetch_and_store(session: Session, symbol: str, start: date, end: date) -> List[PriceRecord]:
     try:
         df = _download(symbol, start, end)
@@ -42,22 +46,32 @@ def fetch_and_store(session: Session, symbol: str, start: date, end: date) -> Li
         logger.warning("Failed to download %s: %s", symbol, exc)
         return []
     if df.empty:
+        logger.warning("Yahoo returned empty frame for %s (%s -> %s)", symbol, start, end)
         return []
 
     records: List[PriceRecord] = []
     for index, row in df.iterrows():
         trade_date = index.date()
-        record = PriceRecord(
-            symbol=symbol,
-            trade_date=trade_date,
-            open=float(row.get("Open")) if pd.notna(row.get("Open")) else None,
-            high=float(row.get("High")) if pd.notna(row.get("High")) else None,
-            low=float(row.get("Low")) if pd.notna(row.get("Low")) else None,
-            close=float(row.get("Close")) if pd.notna(row.get("Close")) else None,
-            volume=float(row.get("Volume")) if pd.notna(row.get("Volume")) else None,
-        )
-        session.merge(record)
-        records.append(record)
+        existing = session.get(PriceRecord, (symbol, trade_date))
+        if existing:
+            existing.open = _safe_float(row.get("Open"))
+            existing.high = _safe_float(row.get("High"))
+            existing.low = _safe_float(row.get("Low"))
+            existing.close = _safe_float(row.get("Close"))
+            existing.volume = _safe_float(row.get("Volume"))
+            target = existing
+        else:
+            target = PriceRecord(
+                symbol=symbol,
+                trade_date=trade_date,
+                open=_safe_float(row.get("Open")),
+                high=_safe_float(row.get("High")),
+                low=_safe_float(row.get("Low")),
+                close=_safe_float(row.get("Close")),
+                volume=_safe_float(row.get("Volume")),
+            )
+            session.add(target)
+        records.append(target)
 
     session.commit()
     return records
