@@ -8,6 +8,7 @@ FastAPI 服务负责从 Yahoo Finance 抓取数据、写入 SQLite，并向前�
 cd backend
 python -m venv .venv
 source .venv/bin/activate  # Windows 使用 .venv\\Scripts\\activate
+pip install -r requirements.txt
 pip install -e .
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
@@ -27,4 +28,4 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## 数据目录
 
-所有 SQLite 文件默认保存在 `backend/data/`，目录已经在仓库中创建 `.gitkeep`，数据库文件将被 `.gitignore` 排除。
+所有 SQLite 文件默认保存在 `backend/data/`，目录已经在仓库中创建 `.gitkeep`，数据库文件将被 `.gitignore` 排除。若要备份历史行情，可直接复制该目录或将其挂载到外部卷。

@@ -5,9 +5,10 @@
 ## 目录结构
 
 ```
-backend/   FastAPI 服务、数据库、scheduler
-frontend/  Vue3 单页应用、图表组件
-deploy/    docker/nginx 相关文件
+backend/        FastAPI 服务、数据库、scheduler
+backend/data/   默认 SQLite 输出目录（market.db 会写在这里）
+frontend/       Vue3 单页应用、图表组件
+deploy/         docker/nginx 相关文件
 ```
 
 ## 本地开发
@@ -17,8 +18,9 @@ deploy/    docker/nginx 相关文件
 cd backend
 python -m venv .venv
 source .venv/bin/activate  # Windows 使用 .venv\\Scripts\\activate
+pip install -r requirements.txt
 pip install -e .
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### 前端
