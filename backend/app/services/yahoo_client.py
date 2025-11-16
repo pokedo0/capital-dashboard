@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import Iterable, List
+import logging
+from typing import List
 
 import pandas as pd
 import yfinance as yf
 from sqlmodel import Session
 
 from ..models.price import PriceRecord
+
+logger = logging.getLogger(__name__)
 
 
 def _download(symbol: str, start: date, end: date) -> pd.DataFrame:
@@ -20,12 +23,24 @@ def _download(symbol: str, start: date, end: date) -> pd.DataFrame:
         progress=False,
         auto_adjust=False,
         actions=False,
+        group_by="column",
+        threads=False,
     )
+    if isinstance(data.columns, pd.MultiIndex):
+        try:
+            data = data.xs(symbol, axis=1, level=-1)
+        except KeyError:
+            data = data.droplevel(0, axis=1)
+    data.columns = [col.capitalize() for col in data.columns]
     return data
 
 
 def fetch_and_store(session: Session, symbol: str, start: date, end: date) -> List[PriceRecord]:
-    df = _download(symbol, start, end)
+    try:
+        df = _download(symbol, start, end)
+    except Exception as exc:  # pragma: no cover - network/runtime errors
+        logger.warning("Failed to download %s: %s", symbol, exc)
+        return []
     if df.empty:
         return []
 
@@ -35,11 +50,11 @@ def fetch_and_store(session: Session, symbol: str, start: date, end: date) -> Li
         record = PriceRecord(
             symbol=symbol,
             trade_date=trade_date,
-            open=float(row["Open"]) if not pd.isna(row["Open"]) else None,
-            high=float(row["High"]) if not pd.isna(row["High"]) else None,
-            low=float(row["Low"]) if not pd.isna(row["Low"]) else None,
-            close=float(row["Close"]) if not pd.isna(row["Close"]) else None,
-            volume=float(row["Volume"]) if not pd.isna(row["Volume"]) else None,
+            open=float(row.get("Open")) if pd.notna(row.get("Open")) else None,
+            high=float(row.get("High")) if pd.notna(row.get("High")) else None,
+            low=float(row.get("Low")) if pd.notna(row.get("Low")) else None,
+            close=float(row.get("Close")) if pd.notna(row.get("Close")) else None,
+            volume=float(row.get("Volume")) if pd.notna(row.get("Volume")) else None,
         )
         session.merge(record)
         records.append(record)
