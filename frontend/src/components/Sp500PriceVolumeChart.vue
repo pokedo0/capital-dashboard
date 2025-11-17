@@ -225,10 +225,16 @@ const attachCrosshair = (bundle: ChartBundle | null) => {
 <template>
   <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4">
     <div class="flex flex-wrap justify-between items-center gap-4">
-      <TimeRangeSelector v-model="rangeKey" />
-      <button class="px-3 py-1 border border-white/20 rounded text-textMuted hover:text-white" @click="openFullscreen">
-        Fullscreen
-      </button>
+      <div>
+        <div class="text-xl text-accentCyan font-semibold uppercase">SPY Price & Volume</div>
+        <p class="text-sm text-textMuted">Index price with 30-day average and volume overlay</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <TimeRangeSelector v-model="rangeKey" />
+        <button class="px-3 py-1 border border-white/20 rounded text-textMuted hover:text-white" @click="openFullscreen">
+          Fullscreen
+        </button>
+      </div>
     </div>
     <div ref="mainContainer" class="w-full h-[320px] relative">
       <div

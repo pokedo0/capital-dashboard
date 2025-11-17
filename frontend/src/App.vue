@@ -25,15 +25,12 @@ const { data: sp500Summary } = useQuery({
     </section>
 
     <section class="grid gap-6 xl:grid-cols-[2fr,1fr]">
-      <div class="flex flex-col gap-4">
-        <div class="text-lg font-semibold uppercase tracking-wide">SPY Price & Volume</div>
-        <Sp500PriceVolumeChart />
-      </div>
+      <Sp500PriceVolumeChart />
       <SectorTable />
     </section>
 
     <section class="space-y-4">
-      <div class="text-2xl text-accentCyan font-semibold uppercase">Mag 7 Focus</div>
+      <div class="text-2xl text-accentCyan font-semibold uppercase">NASDAQ 100 Dashboard</div>
       <div class="grid gap-6 xl:grid-cols-2">
         <Mag7RelativeChart />
         <Mag7HistogramPerformance />
