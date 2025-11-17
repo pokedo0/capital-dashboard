@@ -126,10 +126,13 @@ const syncLegend = (map: Map<string, LineSeries>) => {
 
 watch(
   () => data.value,
-  () => {
+  async () => {
     if (mainContainer.value && !mainChart) {
-      mainChart = initChart(mainContainer.value);
-      mainObserver = attachResize(mainChart, mainContainer.value, mainObserver);
+      await nextTick();
+      if (mainContainer.value) {
+        mainChart = initChart(mainContainer.value);
+        mainObserver = attachResize(mainChart, mainContainer.value, mainObserver);
+      }
     }
     applyRelativeData(mainChart, seriesMap);
     if (showFullscreen.value && fullscreenChart) {
