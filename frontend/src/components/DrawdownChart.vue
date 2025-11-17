@@ -72,7 +72,7 @@ const initChart = () => {
   });
   drawdownLineSeries = chart.addLineSeries({
     priceScaleId: 'left',
-    color: '#f87171',
+    color: 'rgba(248,113,113,0.0001)',
     lineWidth: 2,
   });
   priceSeries = chart.addLineSeries({
