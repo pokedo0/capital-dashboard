@@ -42,7 +42,12 @@ const hoverInfo = ref<
   | { time: string; entries: { label: string; color: string; value?: number }[]; position: { x: number; y: number } }
   | null
 >(null);
+const fullscreenHoverInfo = ref<
+  | { time: string; entries: { label: string; color: string; value?: number }[]; position: { x: number; y: number } }
+  | null
+>(null);
 let mainCrosshairHandler: ((param: MouseEventParams) => void) | null = null;
+let fullscreenCrosshairHandler: ((param: MouseEventParams) => void) | null = null;
 const extractValue = (point: unknown): number | undefined => {
   if (typeof point === 'object' && point && 'value' in point) {
     const value = (point as { value?: number }).value;
@@ -79,7 +84,12 @@ const ensureSeries = (chart: IChartApi | null, map: Map<string, LineSeries>, sym
   return series;
 };
 
-const applyData = (chart: IChartApi | null, map: Map<string, LineSeries>) => {
+const applyData = (
+  chart: IChartApi | null,
+  map: Map<string, LineSeries>,
+  hoverTarget: typeof hoverInfo,
+  type: 'main' | 'fullscreen',
+) => {
   if (!chart || !data.value) return;
   data.value.forEach((seriesData) => {
     if (!isAssetSymbol(seriesData.symbol)) return;
@@ -88,9 +98,7 @@ const applyData = (chart: IChartApi | null, map: Map<string, LineSeries>) => {
   });
   chart.timeScale().fitContent();
   syncVisibility(map);
-  if (chart === mainChart) {
-    attachCrosshair();
-  }
+  attachCrosshair(chart, map, hoverTarget, type);
 };
 
 const isAssetSymbol = (symbol: string): symbol is AssetSymbol =>
@@ -120,9 +128,9 @@ watch(
       mainChart = initChart(mainContainer.value);
       mainObserver = attachResize(mainChart, mainContainer.value, mainObserver);
     }
-    applyData(mainChart, seriesMap);
+    applyData(mainChart, seriesMap, hoverInfo, 'main');
     if (showFullscreen.value && fullscreenChart) {
-      applyData(fullscreenChart, fullscreenSeriesMap);
+      applyData(fullscreenChart, fullscreenSeriesMap, fullscreenHoverInfo, 'fullscreen');
     }
   },
   { immediate: true },
@@ -139,17 +147,22 @@ const openFullscreen = async () => {
   if (fullscreenContainer.value) {
     fullscreenChart = initChart(fullscreenContainer.value, 420);
     fullscreenObserver = attachResize(fullscreenChart, fullscreenContainer.value, fullscreenObserver);
-    applyData(fullscreenChart, fullscreenSeriesMap);
+    applyData(fullscreenChart, fullscreenSeriesMap, fullscreenHoverInfo, 'fullscreen');
   }
 };
 
 watch(showFullscreen, (open) => {
   if (!open && fullscreenChart) {
+    if (fullscreenCrosshairHandler) {
+      fullscreenChart.unsubscribeCrosshairMove(fullscreenCrosshairHandler);
+      fullscreenCrosshairHandler = null;
+    }
     fullscreenChart.remove();
     fullscreenSeriesMap.clear();
     fullscreenChart = null;
     fullscreenObserver?.disconnect();
     fullscreenObserver = null;
+    fullscreenHoverInfo.value = null;
   }
 });
 
@@ -160,8 +173,13 @@ onBeforeUnmount(() => {
   }
   mainChart?.remove();
   mainObserver?.disconnect();
+  if (fullscreenChart && fullscreenCrosshairHandler) {
+    fullscreenChart.unsubscribeCrosshairMove(fullscreenCrosshairHandler);
+    fullscreenCrosshairHandler = null;
+  }
   fullscreenChart?.remove();
   fullscreenObserver?.disconnect();
+  fullscreenHoverInfo.value = null;
 });
 
 const legendItems = SYMBOLS.map((symbol) => ({
@@ -170,21 +188,23 @@ const legendItems = SYMBOLS.map((symbol) => ({
   color: COLORS[symbol],
 }));
 
-const attachCrosshair = () => {
-  if (!mainChart) return;
-  if (mainCrosshairHandler) {
-    mainChart.unsubscribeCrosshairMove(mainCrosshairHandler);
-  }
-  mainCrosshairHandler = (param: MouseEventParams) => {
+const attachCrosshair = (
+  chart: IChartApi | null,
+  map: Map<string, LineSeries>,
+  hoverTarget: typeof hoverInfo,
+  type: 'main' | 'fullscreen',
+) => {
+  if (!chart) return;
+  const handler = (param: MouseEventParams) => {
     if (!param.time || !param.point) {
-      hoverInfo.value = null;
+      hoverTarget.value = null;
       return;
     }
     const time =
       typeof param.time === 'string'
         ? param.time
         : new Date((param.time as number) * 1000).toISOString().split('T')[0] || '';
-    const entries = Array.from(seriesMap.entries()).map(([symbol, series]) => {
+    const entries = Array.from(map.entries()).map(([symbol, series]) => {
       const point = param.seriesData.get(series);
       return {
         label: symbol === 'BTC-USD' ? 'Bitcoin' : symbol,
@@ -192,9 +212,20 @@ const attachCrosshair = () => {
         value: extractValue(point),
       };
     });
-    hoverInfo.value = { time, entries, position: { x: param.point.x, y: param.point.y } };
+    hoverTarget.value = { time, entries, position: { x: param.point.x, y: param.point.y } };
   };
-  mainChart.subscribeCrosshairMove(mainCrosshairHandler);
+  if (type === 'main') {
+    if (mainCrosshairHandler) {
+      chart.unsubscribeCrosshairMove(mainCrosshairHandler);
+    }
+    mainCrosshairHandler = handler;
+  } else {
+    if (fullscreenCrosshairHandler) {
+      chart.unsubscribeCrosshairMove(fullscreenCrosshairHandler);
+    }
+    fullscreenCrosshairHandler = handler;
+  }
+  chart.subscribeCrosshairMove(handler);
 };
 </script>
 
@@ -227,7 +258,23 @@ const attachCrosshair = () => {
     </div>
     <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
     <FullscreenModal :open="showFullscreen" title="Multi-Asset Comparison" @close="showFullscreen = false">
-      <div ref="fullscreenContainer" class="w-full h-full min-h-[420px]"></div>
+      <div class="flex flex-col gap-4 w-full h-full">
+        <div class="relative flex-1 min-h-[420px]">
+          <div ref="fullscreenContainer" class="absolute inset-0"></div>
+          <div
+            v-if="fullscreenHoverInfo"
+            class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50 max-w-[220px]"
+            :style="{ left: `calc(${fullscreenHoverInfo.position.x}px + 12px)`, top: `calc(${fullscreenHoverInfo.position.y}px - 40px)` }"
+          >
+            <div>{{ fullscreenHoverInfo.time }}</div>
+            <div v-for="entry in fullscreenHoverInfo.entries" :key="entry.label" class="flex justify-between gap-3">
+              <span :style="{ color: entry.color }">{{ entry.label }}</span>
+              <span>{{ entry.value?.toFixed(2) ?? '--' }}%</span>
+            </div>
+          </div>
+        </div>
+        <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
+      </div>
     </FullscreenModal>
   </div>
 </template>

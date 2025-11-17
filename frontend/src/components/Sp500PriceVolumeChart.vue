@@ -52,7 +52,18 @@ const hoverInfo = ref<
     }
   | null
 >(null);
+const fullscreenHoverInfo = ref<
+  | {
+      time: string;
+      price?: number;
+      average?: number;
+      volume?: number;
+      position: { x: number; y: number };
+    }
+  | null
+>(null);
 let mainCrosshairHandler: ((param: MouseEventParams) => void) | null = null;
+let fullscreenCrosshairHandler: ((param: MouseEventParams) => void) | null = null;
 const extractValue = (point: unknown): number | undefined => {
   if (typeof point === 'object' && point && 'value' in point) {
     const value = (point as { value?: number }).value;
@@ -104,15 +115,30 @@ const createBundle = (element: HTMLDivElement): ChartBundle => {
 
 const destroyBundle = (bundle: ChartBundle | null) => {
   if (!bundle) return;
-  if (bundle === mainBundle.value && mainCrosshairHandler) {
-    bundle.chart.unsubscribeCrosshairMove(mainCrosshairHandler);
-    mainCrosshairHandler = null;
+  if (bundle === mainBundle.value) {
+    if (mainCrosshairHandler) {
+      bundle.chart.unsubscribeCrosshairMove(mainCrosshairHandler);
+      mainCrosshairHandler = null;
+    }
+    hoverInfo.value = null;
+  }
+  if (bundle === fullscreenBundle.value) {
+    if (fullscreenCrosshairHandler) {
+      bundle.chart.unsubscribeCrosshairMove(fullscreenCrosshairHandler);
+      fullscreenCrosshairHandler = null;
+    }
+    fullscreenHoverInfo.value = null;
   }
   bundle.observer.disconnect();
   bundle.chart.remove();
 };
 
-const applyData = (bundle: ChartBundle | null, points: OHLCVPoint[]) => {
+const applyData = (
+  bundle: ChartBundle | null,
+  points: OHLCVPoint[],
+  hoverTarget?: typeof hoverInfo,
+  type?: 'main' | 'fullscreen',
+) => {
   if (!bundle) return;
   bundle.priceSeries.setData(points.map((p) => ({ time: p.time, value: p.close ?? 0 })));
   bundle.averageSeries.setData(buildMovingAverage(points, 30));
@@ -125,8 +151,8 @@ const applyData = (bundle: ChartBundle | null, points: OHLCVPoint[]) => {
   );
   bundle.chart.timeScale().fitContent();
   syncVisibility(bundle);
-  if (bundle === mainBundle.value) {
-    attachCrosshair(bundle);
+  if (hoverTarget && type) {
+    attachCrosshair(bundle, hoverTarget, type);
   }
 };
 
@@ -145,9 +171,9 @@ watch(
     if (mainContainer.value && !mainBundle.value) {
       mainBundle.value = createBundle(mainContainer.value);
     }
-    applyData(mainBundle.value, payload.points);
+    applyData(mainBundle.value, payload.points, hoverInfo, 'main');
     if (showFullscreen.value && fullscreenBundle.value) {
-      applyData(fullscreenBundle.value, payload.points);
+      applyData(fullscreenBundle.value, payload.points, fullscreenHoverInfo, 'fullscreen');
     }
   },
   { immediate: true },
@@ -164,7 +190,7 @@ const openFullscreen = async () => {
   if (fullscreenContainer.value) {
     fullscreenBundle.value = createBundle(fullscreenContainer.value);
     if (data.value) {
-      applyData(fullscreenBundle.value, data.value.points);
+      applyData(fullscreenBundle.value, data.value.points, fullscreenHoverInfo, 'fullscreen');
     }
   }
 };
@@ -202,14 +228,15 @@ const buildMovingAverage = (points: OHLCVPoint[], period: number) => {
   return values;
 };
 
-const attachCrosshair = (bundle: ChartBundle | null) => {
+const attachCrosshair = (
+  bundle: ChartBundle | null,
+  hoverTarget: typeof hoverInfo,
+  type: 'main' | 'fullscreen',
+) => {
   if (!bundle) return;
-  if (mainCrosshairHandler) {
-    bundle.chart.unsubscribeCrosshairMove(mainCrosshairHandler);
-  }
-  mainCrosshairHandler = (param: MouseEventParams) => {
+  const handler = (param: MouseEventParams) => {
     if (!param.time || !param.point) {
-      hoverInfo.value = null;
+      hoverTarget.value = null;
       return;
     }
     const pricePoint = param.seriesData.get(bundle.priceSeries);
@@ -219,7 +246,7 @@ const attachCrosshair = (bundle: ChartBundle | null) => {
       typeof param.time === 'string'
         ? param.time
         : new Date((param.time as number) * 1000).toISOString().split('T')[0] || '';
-    hoverInfo.value = {
+    hoverTarget.value = {
       time,
       price: extractValue(pricePoint),
       average: extractValue(averagePoint),
@@ -227,7 +254,18 @@ const attachCrosshair = (bundle: ChartBundle | null) => {
       position: { x: param.point.x, y: param.point.y },
     };
   };
-  bundle.chart.subscribeCrosshairMove(mainCrosshairHandler);
+  if (type === 'main') {
+    if (mainCrosshairHandler) {
+      bundle.chart.unsubscribeCrosshairMove(mainCrosshairHandler);
+    }
+    mainCrosshairHandler = handler;
+  } else {
+    if (fullscreenCrosshairHandler) {
+      bundle.chart.unsubscribeCrosshairMove(fullscreenCrosshairHandler);
+    }
+    fullscreenCrosshairHandler = handler;
+  }
+  bundle.chart.subscribeCrosshairMove(handler);
 };
 </script>
 
@@ -260,8 +298,24 @@ const attachCrosshair = (bundle: ChartBundle | null) => {
     </div>
     <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
     <FullscreenModal :open="showFullscreen" title="S&P500 Price & Volume" @close="showFullscreen = false">
-      <div class="relative w-full h-full min-h-[400px]">
-        <div ref="fullscreenContainer" class="absolute inset-0"></div>
+      <div class="flex flex-col gap-4 w-full h-full">
+        <div class="relative flex-1 min-h-[400px]">
+          <div ref="fullscreenContainer" class="absolute inset-0"></div>
+          <div
+            v-if="fullscreenHoverInfo"
+            class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50"
+            :style="{
+              left: `calc(${fullscreenHoverInfo.position.x}px + 12px)`,
+              top: `calc(${fullscreenHoverInfo.position.y}px - 50px)`,
+            }"
+          >
+            <div>{{ fullscreenHoverInfo.time }}</div>
+            <div>Price: {{ fullscreenHoverInfo.price?.toFixed(2) ?? '--' }}</div>
+            <div>30D Avg: {{ fullscreenHoverInfo.average?.toFixed(2) ?? '--' }}</div>
+            <div>Volume: {{ fullscreenHoverInfo.volume?.toFixed(0) ?? '--' }}</div>
+          </div>
+        </div>
+        <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
       </div>
     </FullscreenModal>
   </div>
