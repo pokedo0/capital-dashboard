@@ -118,6 +118,6 @@ onBeforeUnmount(() => {
       </div>
       <TimeRangeSelector v-model="rangeKey" :options="rangeOptions" />
     </div>
-    <div ref="chartRef" class="w-full h-[320px]"></div>
+    <div ref="chartRef" class="w-full h-[360px]"></div>
   </div>
 </template>

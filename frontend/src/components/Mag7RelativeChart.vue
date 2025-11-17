@@ -59,9 +59,9 @@ const extractValue = (point: unknown): number | undefined => {
   return undefined;
 };
 
-const initChart = (container: HTMLDivElement): IChartApi => {
+const initChart = (container: HTMLDivElement, height = 360): IChartApi => {
   return createChart(container, {
-    height: 280,
+    height,
     layout: {
       background: { color: '#050505' },
       textColor: '#f8fafc',
@@ -147,7 +147,7 @@ const openFullscreen = async () => {
   showFullscreen.value = true;
   await nextTick();
   if (fullscreenContainer.value) {
-    fullscreenChart = initChart(fullscreenContainer.value);
+    fullscreenChart = initChart(fullscreenContainer.value, 480);
     fullscreenObserver = attachResize(fullscreenChart, fullscreenContainer.value, fullscreenObserver);
     applyRelativeData(fullscreenChart, fullscreenSeriesMap);
   }
@@ -208,9 +208,7 @@ const attachCrosshair = () => {
   <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4">
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
-        <div class="text-xl text-accentCyan font-semibold uppercase">Mag7 Nov Performance</div>
-        <p class="text-textMuted text-sm">Relative performance since selected period</p>
-      </div>
+        <div class="text-xl text-accentCyan font-semibold uppercase">Mag 7 Line Performance</div>      </div>
       <div class="flex items-center gap-3">
         <TimeRangeSelector v-model="rangeKey" :options="['1W', '1M', '3M', '6M']" />
         <button class="px-3 py-1 border border-white/20 rounded text-textMuted hover:text-white" @click="openFullscreen">
@@ -218,7 +216,7 @@ const attachCrosshair = () => {
         </button>
       </div>
     </div>
-    <div ref="mainContainer" class="w-full h-[280px] relative">
+    <div ref="mainContainer" class="w-full h-[360px] relative">
       <div
         v-if="hoverInfo"
         class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50 max-w-[220px]"
@@ -233,7 +231,7 @@ const attachCrosshair = () => {
     </div>
     <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
     <FullscreenModal :open="showFullscreen" title="Mag 7 Relative Performance" @close="showFullscreen = false">
-      <div ref="fullscreenContainer" class="w-full h-full min-h-[360px]"></div>
+      <div ref="fullscreenContainer" class="w-full h-full min-h-[420px]"></div>
     </FullscreenModal>
   </div>
 </template>
