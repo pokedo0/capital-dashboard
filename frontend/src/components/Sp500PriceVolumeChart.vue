@@ -62,7 +62,6 @@ const extractValue = (point: unknown): number | undefined => {
 };
 
 const chartOptions: DeepPartial<ChartOptions> = {
-  height: 320,
   layout: {
     background: { color: '#050505' },
     textColor: '#f8fafc',
@@ -76,8 +75,17 @@ const chartOptions: DeepPartial<ChartOptions> = {
   timeScale: { borderVisible: false },
 };
 
+const measureSize = (element: HTMLElement) => {
+  const rect = element.getBoundingClientRect();
+  const width = rect.width || element.clientWidth || element.offsetWidth || 600;
+  const height = rect.height || element.clientHeight || element.offsetHeight || 320;
+  return { width, height };
+};
+
 const createBundle = (element: HTMLDivElement): ChartBundle => {
-  const chart = createChart(element, chartOptions);
+  const size = measureSize(element);
+  const chart = createChart(element, { ...chartOptions, height: size.height });
+  chart.applyOptions({ width: size.width, height: size.height });
   const priceSeries = chart.addLineSeries({ color: '#f78c1f', lineWidth: 2 });
   const averageSeries = chart.addLineSeries({ color: '#ef4444', lineWidth: 2 });
   const volumeSeries = chart.addHistogramSeries({
@@ -87,7 +95,8 @@ const createBundle = (element: HTMLDivElement): ChartBundle => {
   });
   volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.75, bottom: 0 } });
   const observer = new ResizeObserver(() => {
-    chart.applyOptions({ width: element.clientWidth, height: element.clientHeight });
+    const nextSize = measureSize(element);
+    chart.applyOptions({ width: nextSize.width, height: nextSize.height });
   });
   observer.observe(element);
   return { chart, priceSeries, averageSeries, volumeSeries, observer };
@@ -236,7 +245,8 @@ const attachCrosshair = (bundle: ChartBundle | null) => {
         </button>
       </div>
     </div>
-    <div ref="mainContainer" class="w-full h-[320px] relative">
+    <div class="relative flex-1 w-full min-h-[320px]">
+      <div ref="mainContainer" class="absolute inset-0"></div>
       <div
         v-if="hoverInfo"
         class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50"
@@ -250,7 +260,9 @@ const attachCrosshair = (bundle: ChartBundle | null) => {
     </div>
     <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
     <FullscreenModal :open="showFullscreen" title="S&P500 Price & Volume" @close="showFullscreen = false">
-      <div ref="fullscreenContainer" class="w-full h-full min-h-[400px]"></div>
+      <div class="relative w-full h-full min-h-[400px]">
+        <div ref="fullscreenContainer" class="absolute inset-0"></div>
+      </div>
     </FullscreenModal>
   </div>
 </template>
