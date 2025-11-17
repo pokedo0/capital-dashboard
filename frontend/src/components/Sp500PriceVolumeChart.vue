@@ -274,6 +274,11 @@ const formatVolume = (value?: number) => {
   return `${(value / 1_000_000).toFixed(2)}M`;
 };
 
+const formatPrice = (value?: number) => {
+  if (value === undefined) return '--';
+  return value.toFixed(2);
+};
+
 const buildMovingAverage = (points: OHLCVPoint[], period: number) => {
   const values: { time: string; value: number }[] = [];
   const queue: number[] = [];
@@ -348,13 +353,22 @@ const attachCrosshair = (
       <div ref="mainContainer" class="absolute inset-0"></div>
       <div
         v-if="hoverInfo"
-        class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50"
-        :style="{ left: `calc(${hoverInfo.position.x}px + 12px)`, top: `calc(${hoverInfo.position.y}px - 50px)` }"
+        class="absolute bg-black/85 border border-white/20 rounded px-4 py-3 text-xs text-white pointer-events-none z-50 max-w-[240px] shadow-lg space-y-2"
+        :style="{ left: '16px', top: '16px' }"
       >
-        <div>{{ hoverInfo.time }}</div>
-        <div>Price: {{ hoverInfo.price?.toFixed(2) ?? '--' }}</div>
-        <div>30D Avg: {{ hoverInfo.average?.toFixed(2) ?? '--' }}</div>
-        <div>Volume: {{ formatVolume(hoverInfo.volume) }}</div>
+        <div class="text-sm font-semibold">{{ hoverInfo.time }}</div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background-color: #f78c1f"></span> Price</span>
+          <span>{{ formatPrice(hoverInfo.price) }}</span>
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background-color: #ef4444"></span> 30D Avg</span>
+          <span>{{ formatPrice(hoverInfo.average) }}</span>
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background-color: #2563eb"></span> Volume</span>
+          <span>{{ formatVolume(hoverInfo.volume) }}</span>
+        </div>
       </div>
     </div>
     <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
@@ -364,16 +378,22 @@ const attachCrosshair = (
           <div ref="fullscreenContainer" class="absolute inset-0"></div>
           <div
             v-if="fullscreenHoverInfo"
-            class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50"
-            :style="{
-              left: `calc(${fullscreenHoverInfo.position.x}px + 12px)`,
-              top: `calc(${fullscreenHoverInfo.position.y}px - 50px)`,
-            }"
+            class="absolute bg-black/85 border border-white/20 rounded px-4 py-3 text-xs text-white pointer-events-none z-50 max-w-[260px] shadow-lg space-y-2"
+            :style="{ left: '20px', top: '20px' }"
           >
-            <div>{{ fullscreenHoverInfo.time }}</div>
-            <div>Price: {{ fullscreenHoverInfo.price?.toFixed(2) ?? '--' }}</div>
-            <div>30D Avg: {{ fullscreenHoverInfo.average?.toFixed(2) ?? '--' }}</div>
-            <div>Volume: {{ formatVolume(fullscreenHoverInfo.volume) }}</div>
+            <div class="text-sm font-semibold">{{ fullscreenHoverInfo.time }}</div>
+            <div class="flex items-center justify-between gap-3">
+              <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background-color: #f78c1f"></span> Price</span>
+              <span>{{ formatPrice(fullscreenHoverInfo.price) }}</span>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+              <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background-color: #ef4444"></span> 30D Avg</span>
+              <span>{{ formatPrice(fullscreenHoverInfo.average) }}</span>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+              <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background-color: #2563eb"></span> Volume</span>
+              <span>{{ formatVolume(fullscreenHoverInfo.volume) }}</span>
+            </div>
           </div>
         </div>
         <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
