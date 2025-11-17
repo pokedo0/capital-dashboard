@@ -30,7 +30,10 @@ const { data: nasdaqSummary } = useQuery({
     </section>
 
     <section class="grid gap-6 xl:grid-cols-[2fr,1fr]">
-      <Sp500PriceVolumeChart />
+      <div class="flex flex-col gap-4">
+        <div class="text-lg font-semibold uppercase tracking-wide">SPY Price & Volume</div>
+        <Sp500PriceVolumeChart />
+      </div>
       <SectorTable />
     </section>
 
