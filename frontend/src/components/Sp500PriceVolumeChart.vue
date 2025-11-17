@@ -6,6 +6,7 @@ import {
   type DeepPartial,
   type IChartApi,
   type ISeriesApi,
+  type MouseEventParams,
 } from 'lightweight-charts';
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
@@ -41,6 +42,24 @@ const mainContainer = ref<HTMLDivElement | null>(null);
 const fullscreenContainer = ref<HTMLDivElement | null>(null);
 const mainBundle = ref<ChartBundle | null>(null);
 const fullscreenBundle = ref<ChartBundle | null>(null);
+const hoverInfo = ref<
+  | {
+      time: string;
+      price?: number;
+      average?: number;
+      volume?: number;
+      position: { x: number; y: number };
+    }
+  | null
+>(null);
+let mainCrosshairHandler: ((param: MouseEventParams) => void) | null = null;
+const extractValue = (point: unknown): number | undefined => {
+  if (typeof point === 'object' && point && 'value' in point) {
+    const value = (point as { value?: number }).value;
+    return typeof value === 'number' ? value : undefined;
+  }
+  return undefined;
+};
 
 const chartOptions: DeepPartial<ChartOptions> = {
   height: 320,
@@ -76,6 +95,10 @@ const createBundle = (element: HTMLDivElement): ChartBundle => {
 
 const destroyBundle = (bundle: ChartBundle | null) => {
   if (!bundle) return;
+  if (bundle === mainBundle.value && mainCrosshairHandler) {
+    bundle.chart.unsubscribeCrosshairMove(mainCrosshairHandler);
+    mainCrosshairHandler = null;
+  }
   bundle.observer.disconnect();
   bundle.chart.remove();
 };
@@ -93,6 +116,9 @@ const applyData = (bundle: ChartBundle | null, points: OHLCVPoint[]) => {
   );
   bundle.chart.timeScale().fitContent();
   syncVisibility(bundle);
+  if (bundle === mainBundle.value) {
+    attachCrosshair(bundle);
+  }
 };
 
 const syncVisibility = (bundle: ChartBundle | null) => {
@@ -166,6 +192,34 @@ const buildMovingAverage = (points: OHLCVPoint[], period: number) => {
   });
   return values;
 };
+
+const attachCrosshair = (bundle: ChartBundle | null) => {
+  if (!bundle) return;
+  if (mainCrosshairHandler) {
+    bundle.chart.unsubscribeCrosshairMove(mainCrosshairHandler);
+  }
+  mainCrosshairHandler = (param: MouseEventParams) => {
+    if (!param.time || !param.point) {
+      hoverInfo.value = null;
+      return;
+    }
+    const pricePoint = param.seriesData.get(bundle.priceSeries);
+    const averagePoint = param.seriesData.get(bundle.averageSeries);
+    const volumePoint = param.seriesData.get(bundle.volumeSeries);
+    const time =
+      typeof param.time === 'string'
+        ? param.time
+        : new Date((param.time as number) * 1000).toISOString().split('T')[0] || '';
+    hoverInfo.value = {
+      time,
+      price: extractValue(pricePoint),
+      average: extractValue(averagePoint),
+      volume: extractValue(volumePoint),
+      position: { x: param.point.x, y: param.point.y },
+    };
+  };
+  bundle.chart.subscribeCrosshairMove(mainCrosshairHandler);
+};
 </script>
 
 <template>
@@ -176,7 +230,18 @@ const buildMovingAverage = (points: OHLCVPoint[], period: number) => {
         Fullscreen
       </button>
     </div>
-    <div ref="mainContainer" class="w-full h-[320px]"></div>
+    <div ref="mainContainer" class="w-full h-[320px] relative">
+      <div
+        v-if="hoverInfo"
+        class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50"
+        :style="{ left: `calc(${hoverInfo.position.x}px + 12px)`, top: `calc(${hoverInfo.position.y}px - 50px)` }"
+      >
+        <div>{{ hoverInfo.time }}</div>
+        <div>Price: {{ hoverInfo.price?.toFixed(2) ?? '--' }}</div>
+        <div>30D Avg: {{ hoverInfo.average?.toFixed(2) ?? '--' }}</div>
+        <div>Volume: {{ hoverInfo.volume?.toFixed(0) ?? '--' }}</div>
+      </div>
+    </div>
     <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
     <FullscreenModal :open="showFullscreen" title="S&P500 Price & Volume" @close="showFullscreen = false">
       <div ref="fullscreenContainer" class="w-full h-full min-h-[400px]"></div>

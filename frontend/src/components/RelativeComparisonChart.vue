@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { createChart, type IChartApi, type ISeriesApi } from 'lightweight-charts';
+import { createChart, type IChartApi, type ISeriesApi, type MouseEventParams } from 'lightweight-charts';
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import { fetchRelativeTo } from '../services/api';
@@ -26,6 +26,17 @@ let chart: IChartApi | null = null;
 let ratioSeries: LineSeries | null = null;
 let averageSeries: LineSeries | null = null;
 let observer: ResizeObserver | null = null;
+let crosshairHandler: ((param: MouseEventParams) => void) | null = null;
+const hoverInfo = ref<{ time: string; ratio?: number; average?: number; position: { x: number; y: number } } | null>(
+  null,
+);
+const extractValue = (point: unknown): number | undefined => {
+  if (typeof point === 'object' && point && 'value' in point) {
+    const value = (point as { value?: number }).value;
+    return typeof value === 'number' ? value : undefined;
+  }
+  return undefined;
+};
 
 const initChart = () => {
   if (!chartContainer.value) return;
@@ -60,13 +71,38 @@ const initChart = () => {
     }
   });
   observer.observe(chartContainer.value);
+
+  crosshairHandler = (param: MouseEventParams) => {
+    if (!param.time || !param.point || !ratioSeries || !averageSeries) {
+      hoverInfo.value = null;
+      return;
+    }
+    const ratioPoint = param.seriesData.get(ratioSeries);
+    const avgPoint = param.seriesData.get(averageSeries);
+    const time =
+      typeof param.time === 'string'
+        ? param.time
+        : new Date((param.time as number) * 1000).toISOString().split('T')[0] || '';
+    hoverInfo.value = {
+      time,
+      ratio: extractValue(ratioPoint),
+      average: extractValue(avgPoint),
+      position: { x: param.point.x, y: param.point.y },
+    };
+  };
+  chart.subscribeCrosshairMove(crosshairHandler);
 };
 
 const disposeChart = () => {
   observer?.disconnect();
   observer = null;
+  if (chart && crosshairHandler) {
+    chart.unsubscribeCrosshairMove(crosshairHandler);
+  }
   chart?.remove();
   chart = null;
+  crosshairHandler = null;
+  hoverInfo.value = null;
 };
 
 onBeforeUnmount(disposeChart);
@@ -90,7 +126,7 @@ watch(
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl font-semibold uppercase">{{ selectedSymbol }} Relative {{ selectedBenchmark }}</div>
-        <p class="text-sm text-textMuted">Price ratio (symbol / benchmark × 100) with 30-day average</p>
+        <p class="text-sm text-textMuted">Price ratio (symbol / benchmark × 100) with 50-day average</p>
       </div>
       <div class="flex items-center gap-3">
         <select v-model="selectedSymbol" class="bg-panel border border-white/20 rounded px-3 py-1 text-white">
@@ -102,13 +138,23 @@ watch(
         <TimeRangeSelector v-model="rangeKey" :options="['6M', '1Y', '2Y']" />
       </div>
     </div>
-    <div ref="chartContainer" class="w-full h-[320px]"></div>
+    <div ref="chartContainer" class="w-full h-[320px] relative">
+      <div
+        v-if="hoverInfo"
+        class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50"
+        :style="{ left: `calc(${hoverInfo.position.x}px + 12px)`, top: `calc(${hoverInfo.position.y}px - 40px)` }"
+      >
+        <div>{{ hoverInfo.time }}</div>
+        <div>Ratio: {{ hoverInfo.ratio?.toFixed(2) ?? '--' }}</div>
+        <div>50D Avg: {{ hoverInfo.average?.toFixed(2) ?? '--' }}</div>
+      </div>
+    </div>
     <div class="text-xs uppercase tracking-wide flex gap-4 text-textMuted">
       <span class="flex items-center gap-2">
         <span class="w-4 h-1 bg-[#60a5fa] rounded-full"></span> Ratio
       </span>
       <span class="flex items-center gap-2">
-        <span class="w-4 h-1 bg-[#f78c1f] rounded-full"></span> 30D Avg
+        <span class="w-4 h-1 bg-[#f78c1f] rounded-full"></span> 50D Avg
       </span>
     </div>
   </div>

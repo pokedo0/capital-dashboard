@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { createChart, type IChartApi, type ISeriesApi } from 'lightweight-charts';
+import { createChart, type IChartApi, type ISeriesApi, type MouseEventParams } from 'lightweight-charts';
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import LegendToggle from './LegendToggle.vue';
@@ -42,6 +42,22 @@ let mainObserver: ResizeObserver | null = null;
 let fullscreenObserver: ResizeObserver | null = null;
 const seriesMap = new Map<string, LineSeries>();
 const fullscreenSeriesMap = new Map<string, LineSeries>();
+let mainCrosshairHandler: ((param: MouseEventParams) => void) | null = null;
+const hoverInfo = ref<
+  | {
+      time: string;
+      entries: { label: string; color: string; value?: number }[];
+      position: { x: number; y: number };
+    }
+  | null
+>(null);
+const extractValue = (point: unknown): number | undefined => {
+  if (typeof point === 'object' && point && 'value' in point) {
+    const value = (point as { value?: number }).value;
+    return typeof value === 'number' ? value : undefined;
+  }
+  return undefined;
+};
 
 const initChart = (container: HTMLDivElement): IChartApi => {
   return createChart(container, {
@@ -82,6 +98,9 @@ const applyRelativeData = (chart: IChartApi | null, map: Map<string, LineSeries>
   });
   chart.timeScale().fitContent();
   syncLegend(map);
+  if (chart === mainChart) {
+    attachCrosshair();
+  }
 };
 
 const isSymbolKey = (value: string): value is SymbolKey =>
@@ -156,6 +175,33 @@ const legendItems = SYMBOLS.map((symbol) => ({
   label: symbol === '^NDX' ? 'NDX' : symbol,
   color: COLOR_MAP[symbol],
 }));
+
+const attachCrosshair = () => {
+  if (!mainChart) return;
+  if (mainCrosshairHandler) {
+    mainChart.unsubscribeCrosshairMove(mainCrosshairHandler);
+  }
+  mainCrosshairHandler = (param: MouseEventParams) => {
+    if (!param.time || !param.point) {
+      hoverInfo.value = null;
+      return;
+    }
+    const time =
+      typeof param.time === 'string'
+        ? param.time
+        : new Date((param.time as number) * 1000).toISOString().split('T')[0] || '';
+    const entries = Array.from(seriesMap.entries()).map(([symbol, series]) => {
+      const value = param.seriesData.get(series);
+      return {
+        label: symbol === '^NDX' ? 'NDX' : symbol,
+        color: COLOR_MAP[symbol as SymbolKey] ?? '#fff',
+        value: extractValue(value),
+      };
+    });
+    hoverInfo.value = { time, entries, position: { x: param.point.x, y: param.point.y } };
+  };
+  mainChart.subscribeCrosshairMove(mainCrosshairHandler);
+};
 </script>
 
 <template>
@@ -172,7 +218,19 @@ const legendItems = SYMBOLS.map((symbol) => ({
         </button>
       </div>
     </div>
-    <div ref="mainContainer" class="w-full h-[280px]"></div>
+    <div ref="mainContainer" class="w-full h-[280px] relative">
+      <div
+        v-if="hoverInfo"
+        class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50 max-w-[220px]"
+        :style="{ left: `calc(${hoverInfo.position.x}px + 12px)`, top: `calc(${hoverInfo.position.y}px - 40px)` }"
+      >
+        <div>{{ hoverInfo.time }}</div>
+        <div v-for="entry in hoverInfo.entries" :key="entry.label" class="flex justify-between gap-3">
+          <span :style="{ color: entry.color }">{{ entry.label }}</span>
+          <span>{{ entry.value?.toFixed(2) ?? '--' }}%</span>
+        </div>
+      </div>
+    </div>
     <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
     <FullscreenModal :open="showFullscreen" title="Mag 7 Relative Performance" @close="showFullscreen = false">
       <div ref="fullscreenContainer" class="w-full h-full min-h-[360px]"></div>
