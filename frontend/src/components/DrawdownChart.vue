@@ -9,7 +9,6 @@ type AreaSeries = ISeriesApi<'Area'>;
 type LineSeries = ISeriesApi<'Line'>;
 
 const SYMBOLS = ['SPY', 'TSLA', 'NVDA', 'AAPL', 'MSFT', 'META'];
-const Y_AXIS_VALUES = [0, -5, -10, -15, -20, -25, -30, -35, -40];
 
 const selectedSymbol = ref('SPY');
 const rangeKey = ref('1Y');
@@ -154,6 +153,21 @@ watch(
 );
 
 const currentDrawdown = computed(() => data.value?.current_drawdown ?? 0);
+const yAxisValues = computed(() => {
+  const points = data.value?.drawdown ?? [];
+  let minValue = points.reduce((acc, point) => Math.min(acc, point.value ?? 0), 0);
+  if (!Number.isFinite(minValue)) {
+    minValue = 0;
+  }
+  minValue = Math.min(minValue, -5);
+  const step = 5;
+  const lowerBound = Math.floor(minValue / step) * step;
+  const values: number[] = [];
+  for (let value = 0; value >= lowerBound; value -= step) {
+    values.push(value);
+  }
+  return values;
+});
 </script>
 
 <template>
@@ -175,7 +189,7 @@ const currentDrawdown = computed(() => data.value?.current_drawdown ?? 0);
     </div>
     <div class="flex w-full h-[320px] relative">
       <div class="w-14 flex flex-col justify-between text-xs text-textMuted pr-2">
-        <span v-for="value in Y_AXIS_VALUES" :key="value">{{ value.toFixed(0) }}%</span>
+        <span v-for="value in yAxisValues" :key="value">{{ value.toFixed(0) }}%</span>
       </div>
       <div ref="chartContainer" class="flex-1 h-full relative">
         <div class="absolute top-4 left-1/2 -translate-x-1/2 text-accentRed text-sm font-semibold">
