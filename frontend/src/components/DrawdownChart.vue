@@ -24,6 +24,7 @@ watch([selectedSymbol, rangeKey], () => refetch());
 let chart: IChartApi | null = null;
 let drawdownSeries: AreaSeries | null = null;
 let priceSeries: LineSeries | null = null;
+let baselineSeries: LineSeries | null = null;
 let observer: ResizeObserver | null = null;
 
 const initChart = () => {
@@ -57,14 +58,19 @@ const initChart = () => {
 
   drawdownSeries = chart.addAreaSeries({
     priceScaleId: 'left',
-    lineColor: '#ef4444',
-    topColor: 'rgba(239,68,68,0.3)',
-    bottomColor: 'rgba(239,68,68,0)',
-    lineWidth: 2,
+    lineColor: '#1d4ed8',
+    topColor: 'rgba(37,99,235,0.7)',
+    bottomColor: 'rgba(37,99,235,0.1)',
+    lineWidth: 1,
   });
   priceSeries = chart.addLineSeries({
     priceScaleId: 'right',
     color: '#f78c1f',
+    lineWidth: 2,
+  });
+  baselineSeries = chart.addLineSeries({
+    priceScaleId: 'left',
+    color: '#ef4444',
     lineWidth: 2,
   });
 
@@ -92,16 +98,15 @@ watch(
     if (!chart) {
       initChart();
     }
-    if (!chart || !drawdownSeries || !priceSeries) return;
+    if (!chart || !drawdownSeries || !priceSeries || !baselineSeries) return;
     drawdownSeries.setData(payload.drawdown.map((point) => ({ time: point.time, value: point.value })));
-    drawdownSeries.applyOptions({
-      priceLineVisible: true,
-      priceLineColor: '#ef4444',
-      priceLineWidth: 2,
-      baseLineVisible: true,
-      baseLineColor: '#ef4444',
-    });
     priceSeries.setData(payload.price.map((point) => ({ time: point.time, value: point.value })));
+    baselineSeries.setData(
+      payload.drawdown.map((point) => ({
+        time: point.time,
+        value: -30,
+      })),
+    );
     chart.timeScale().fitContent();
   },
   { immediate: true },
@@ -111,15 +116,13 @@ const currentDrawdown = computed(() => data.value?.current_drawdown ?? 0);
 </script>
 
 <template>
-  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4">
+  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 relative">
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl font-semibold uppercase">{{ selectedSymbol }} Drawdown</div>
-        <div class="text-sm text-textMuted">
-          Current drawdown:
-          <span :class="currentDrawdown >= 0 ? 'text-accentGreen' : 'text-accentRed'">
-            {{ currentDrawdown.toFixed(2) }}%
-          </span>
+        <div class="text-sm text-textMuted flex items-center gap-2">
+          <span>Current drawdown:</span>
+          <span class="text-white font-semibold">{{ currentDrawdown.toFixed(2) }}%</span>
         </div>
       </div>
       <div class="flex items-center gap-3">
@@ -129,13 +132,23 @@ const currentDrawdown = computed(() => data.value?.current_drawdown ?? 0);
         <TimeRangeSelector v-model="rangeKey" />
       </div>
     </div>
-    <div ref="chartContainer" class="w-full h-[320px]"></div>
+    <div ref="chartContainer" class="w-full h-[320px] relative">
+      <div class="absolute top-4 left-1/2 -translate-x-1/2 text-accentRed text-sm font-semibold">
+        Baseline -30%
+      </div>
+      <div class="absolute top-12 right-4 text-white text-sm font-semibold">
+        {{ currentDrawdown.toFixed(2) }}%
+      </div>
+    </div>
     <div class="text-xs uppercase tracking-wide flex gap-4 text-textMuted">
       <span class="flex items-center gap-2">
-        <span class="w-4 h-1 bg-[#ef4444] rounded-full"></span> Drawdown (%)
+        <span class="w-4 h-1 bg-[#1d4ed8] rounded-full"></span> Drawdown (%)
       </span>
       <span class="flex items-center gap-2">
         <span class="w-4 h-1 bg-[#f78c1f] rounded-full"></span> Price ($)
+      </span>
+      <span class="flex items-center gap-2">
+        <span class="w-4 h-1 bg-[#ef4444] rounded-full"></span> Baseline -30%
       </span>
     </div>
   </div>
