@@ -59,8 +59,13 @@ const extractValue = (point: unknown): number | undefined => {
   return undefined;
 };
 
+const measureHeight = (element: HTMLElement): number => {
+  const rect = element.getBoundingClientRect();
+  return rect.height || element.clientHeight || 360;
+};
+
 const initChart = (container: HTMLDivElement): IChartApi => {
-  const chartHeight = container.clientHeight || 360;
+  const chartHeight = measureHeight(container);
   return createChart(container, {
     height: chartHeight,
     layout: {
@@ -111,7 +116,7 @@ const attachResize = (chart: IChartApi | null, container: HTMLDivElement | null,
   existing?.disconnect();
   if (!chart || !container) return null;
   const observer = new ResizeObserver(() => {
-    chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+    chart.applyOptions({ width: container.clientWidth, height: measureHeight(container) });
   });
   observer.observe(container);
   return observer;

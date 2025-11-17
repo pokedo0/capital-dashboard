@@ -16,11 +16,6 @@ const { data: sp500Summary } = useQuery({
   refetchInterval: 60_000,
 });
 
-const { data: nasdaqSummary } = useQuery({
-  queryKey: ['market', 'nasdaq100'],
-  queryFn: () => fetchMarketSummary('nasdaq100'),
-  refetchInterval: 60_000,
-});
 </script>
 
 <template>
@@ -38,13 +33,7 @@ const { data: nasdaqSummary } = useQuery({
     </section>
 
     <section class="space-y-4">
-      <MarketHeader
-        title="NASDAQ 100 Dashboard"
-        subtitle="Mag 7 Focus"
-        variant="secondary"
-        :summary="nasdaqSummary"
-        :show-date="false"
-      />
+      <div class="text-3xl text-accentCyan font-semibold uppercase tracking-widest">Mag 7 Focus</div>
       <div class="grid gap-6 xl:grid-cols-2">
         <Mag7RelativeChart />
         <Mag7HistogramPerformance />
