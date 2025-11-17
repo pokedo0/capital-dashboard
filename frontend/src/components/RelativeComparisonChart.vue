@@ -38,11 +38,19 @@ const extractValue = (point: unknown): number | undefined => {
   return undefined;
 };
 
+const measureSize = (element: HTMLElement) => {
+  const rect = element.getBoundingClientRect();
+  const width = rect.width || element.clientWidth || element.offsetWidth || 600;
+  const height = rect.height || element.clientHeight || element.offsetHeight || 320;
+  return { width, height };
+};
+
 const initChart = () => {
   if (!chartContainer.value) return;
   disposeChart();
+  const size = measureSize(chartContainer.value);
   chart = createChart(chartContainer.value, {
-    height: 320,
+    height: size.height,
     layout: {
       background: { color: '#050505' },
       textColor: '#f8fafc',
@@ -55,6 +63,7 @@ const initChart = () => {
     rightPriceScale: { borderVisible: false },
     timeScale: { borderVisible: false, timeVisible: true },
   });
+  chart.applyOptions({ width: size.width, height: size.height });
 
   ratioSeries = chart.addLineSeries({
     color: '#60a5fa',
@@ -67,7 +76,8 @@ const initChart = () => {
 
   observer = new ResizeObserver(() => {
     if (chart && chartContainer.value) {
-      chart.applyOptions({ width: chartContainer.value.clientWidth, height: chartContainer.value.clientHeight });
+      const nextSize = measureSize(chartContainer.value);
+      chart.applyOptions({ width: nextSize.width, height: nextSize.height });
     }
   });
   observer.observe(chartContainer.value);
@@ -138,7 +148,8 @@ watch(
         <TimeRangeSelector v-model="rangeKey" :options="['6M', '1Y', '2Y']" />
       </div>
     </div>
-    <div ref="chartContainer" class="w-full h-[320px] relative">
+    <div class="relative w-full flex-1 min-h-[320px]">
+      <div ref="chartContainer" class="absolute inset-0"></div>
       <div
         v-if="hoverInfo"
         class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50"

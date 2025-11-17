@@ -49,11 +49,19 @@ const resolveValue = (point: unknown): number | undefined => {
 
 let crosshairHandler: ((param: MouseEventParams) => void) | null = null;
 
+const measureSize = (element: HTMLElement) => {
+  const rect = element.getBoundingClientRect();
+  const width = rect.width || element.clientWidth || element.offsetWidth || 600;
+  const height = rect.height || element.clientHeight || element.offsetHeight || 320;
+  return { width, height };
+};
+
 const initChart = () => {
   if (!chartContainer.value) return;
   disposeChart();
+  const size = measureSize(chartContainer.value);
   chart = createChart(chartContainer.value, {
-    height: 320,
+    height: size.height,
     layout: {
       background: { color: '#050505' },
       textColor: '#f8fafc',
@@ -77,6 +85,7 @@ const initChart = () => {
       vertLines: { color: 'rgba(255,255,255,0.05)' },
     },
   });
+  chart.applyOptions({ width: size.width, height: size.height });
   chart.priceScale('left').applyOptions({
     borderVisible: false,
     scaleMargins: { top: 0.02, bottom: 0.02 },
@@ -108,12 +117,12 @@ const initChart = () => {
   drawdownLineSeries = chart.addLineSeries({
     priceScaleId: 'left',
     color: '#ffffff',
-    lineWidth: 2,
-    lineStyle: 3,
+    lineWidth: 1,
+    lineStyle: 2,
     crosshairMarkerVisible: true,
     crosshairMarkerBorderColor: '#ffffff',
     crosshairMarkerBackgroundColor: '#ffffff',
-    crosshairMarkerRadius: 2,
+    crosshairMarkerRadius: 1,
     priceFormat: {
       type: 'custom',
       formatter: (price: number) => `${price.toFixed(0)}%`,
@@ -135,7 +144,8 @@ const initChart = () => {
 
   observer = new ResizeObserver(() => {
     if (chart && chartContainer.value) {
-      chart.applyOptions({ width: chartContainer.value.clientWidth, height: chartContainer.value.clientHeight });
+      const nextSize = measureSize(chartContainer.value);
+      chart.applyOptions({ width: nextSize.width, height: nextSize.height });
     }
   });
   observer.observe(chartContainer.value);
@@ -260,11 +270,12 @@ const yAxisValues = computed(() => {
         <TimeRangeSelector v-model="rangeKey" />
       </div>
     </div>
-    <div class="flex w-full h-[320px] relative">
-      <div class="w-14 flex flex-col justify-between text-xs text-textMuted pr-2">
+    <div class="flex w-full min-h-[320px] gap-3">
+      <div class="w-14 flex flex-col justify-between text-xs text-textMuted pr-2 py-1">
         <span v-for="value in yAxisValues" :key="value">{{ value.toFixed(0) }}%</span>
       </div>
-      <div ref="chartContainer" class="flex-1 h-full relative">
+      <div class="relative flex-1 min-h-[320px]">
+        <div ref="chartContainer" class="absolute inset-0"></div>
         <div
           v-if="hoverInfo"
           class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50 shadow-lg"
