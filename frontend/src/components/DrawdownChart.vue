@@ -107,8 +107,10 @@ const initChart = () => {
   });
   drawdownLineSeries = chart.addLineSeries({
     priceScaleId: 'left',
-    color: 'rgba(248,113,113,0.0001)',
-    lineWidth: 2,
+    color: '#ffffff',
+    lineWidth: 1,
+    lineStyle: 2,
+    crosshairMarkerVisible: false,
     priceFormat: {
       type: 'custom',
       formatter: (price: number) => `${price.toFixed(0)}%`,
