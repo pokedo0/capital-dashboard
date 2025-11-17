@@ -83,6 +83,7 @@ const chartOptions: DeepPartial<ChartOptions> = {
     vertLines: { color: 'rgba(255,255,255,0.05)' },
   },
   rightPriceScale: { borderVisible: false },
+  leftPriceScale: { visible: true, borderVisible: false },
   timeScale: { borderVisible: false },
 };
 
@@ -100,11 +101,19 @@ const createBundle = (element: HTMLDivElement): ChartBundle => {
   const priceSeries = chart.addLineSeries({ color: '#f78c1f', lineWidth: 2 });
   const averageSeries = chart.addLineSeries({ color: '#ef4444', lineWidth: 2 });
   const volumeSeries = chart.addHistogramSeries({
-    priceScaleId: '',
+    priceScaleId: 'left',
     color: '#2563eb',
-    priceFormat: { type: 'volume' },
+    priceFormat: {
+      type: 'custom',
+      formatter: (value: number) => `${(value / 1_000_000).toFixed(2)}M`,
+      minMove: 1,
+    },
   });
-  volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.75, bottom: 0 } });
+  volumeSeries.priceScale().applyOptions({
+    scaleMargins: { top: 0.75, bottom: 0 },
+    title: 'Volume (M)',
+    entireTextOnly: true,
+  });
   const observer = new ResizeObserver(() => {
     const nextSize = measureSize(element);
     chart.applyOptions({ width: nextSize.width, height: nextSize.height });
@@ -145,7 +154,7 @@ const applyData = (
   bundle.volumeSeries.setData(
     points.map((p) => ({
       time: p.time,
-      value: p.volume ?? 0,
+      value: (p.volume ?? 0),
       color: '#2563eb',
     })),
   );
@@ -212,6 +221,11 @@ const legendItems = [
   { key: 'ma', label: '30D Avg', color: '#ef4444' },
   { key: 'volume', label: 'Volume', color: '#2563eb' },
 ];
+
+const formatVolume = (value?: number) => {
+  if (value === undefined) return '--';
+  return `${(value / 1_000_000).toFixed(2)}M`;
+};
 
 const buildMovingAverage = (points: OHLCVPoint[], period: number) => {
   const values: { time: string; value: number }[] = [];
@@ -293,7 +307,7 @@ const attachCrosshair = (
         <div>{{ hoverInfo.time }}</div>
         <div>Price: {{ hoverInfo.price?.toFixed(2) ?? '--' }}</div>
         <div>30D Avg: {{ hoverInfo.average?.toFixed(2) ?? '--' }}</div>
-        <div>Volume: {{ hoverInfo.volume?.toFixed(0) ?? '--' }}</div>
+        <div>Volume: {{ formatVolume(hoverInfo.volume) }}</div>
       </div>
     </div>
     <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
@@ -312,7 +326,7 @@ const attachCrosshair = (
             <div>{{ fullscreenHoverInfo.time }}</div>
             <div>Price: {{ fullscreenHoverInfo.price?.toFixed(2) ?? '--' }}</div>
             <div>30D Avg: {{ fullscreenHoverInfo.average?.toFixed(2) ?? '--' }}</div>
-            <div>Volume: {{ fullscreenHoverInfo.volume?.toFixed(0) ?? '--' }}</div>
+            <div>Volume: {{ formatVolume(fullscreenHoverInfo.volume) }}</div>
           </div>
         </div>
         <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
