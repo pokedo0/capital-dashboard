@@ -8,7 +8,7 @@ import { fetchDrawdown } from '../services/api';
 type AreaSeries = ISeriesApi<'Area'>;
 type LineSeries = ISeriesApi<'Line'>;
 
-const SYMBOLS = ['TSLA', 'NVDA', 'AAPL', 'MSFT', 'META', 'SPY'];
+const SYMBOLS = ['SPY', 'TSLA', 'NVDA', 'AAPL', 'MSFT', 'META'];
 
 const selectedSymbol = ref('TSLA');
 const rangeKey = ref('1Y');
