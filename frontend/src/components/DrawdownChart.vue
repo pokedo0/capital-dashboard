@@ -245,6 +245,12 @@ const yAxisValues = computed(() => {
   }
   return values;
 });
+const symbolInput = computed({
+  get: () => selectedSymbol.value,
+  set: (val: string) => {
+    selectedSymbol.value = val.trim().toUpperCase();
+  },
+});
 </script>
 
 <template>
@@ -264,9 +270,17 @@ const yAxisValues = computed(() => {
         </div>
       </div>
       <div class="flex items-center gap-3">
-        <select v-model="selectedSymbol" class="bg-panel border border-white/20 rounded px-3 py-1 text-white">
-          <option v-for="symbol in SYMBOLS" :key="symbol" :value="symbol">{{ symbol }}</option>
-        </select>
+        <div>
+          <input
+            v-model="symbolInput"
+            list="drawdown-symbols"
+            class="bg-panel border border-white/20 rounded px-3 py-1 text-white uppercase"
+            placeholder="Enter symbol"
+          />
+          <datalist id="drawdown-symbols">
+            <option v-for="symbol in SYMBOLS" :key="symbol" :value="symbol" />
+          </datalist>
+        </div>
         <TimeRangeSelector v-model="rangeKey" />
       </div>
     </div>

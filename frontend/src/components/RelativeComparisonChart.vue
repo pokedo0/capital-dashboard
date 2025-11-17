@@ -129,6 +129,20 @@ watch(
   },
   { immediate: true },
 );
+
+const symbolInput = computed({
+  get: () => selectedSymbol.value,
+  set: (val: string) => {
+    selectedSymbol.value = val.trim().toUpperCase();
+  },
+});
+
+const benchmarkInput = computed({
+  get: () => selectedBenchmark.value,
+  set: (val: string) => {
+    selectedBenchmark.value = val.trim().toUpperCase();
+  },
+});
 </script>
 
 <template>
@@ -139,12 +153,28 @@ watch(
         <p class="text-sm text-textMuted">Price ratio (symbol / benchmark × 100) with 50-day average</p>
       </div>
       <div class="flex items-center gap-3">
-        <select v-model="selectedSymbol" class="bg-panel border border-white/20 rounded px-3 py-1 text-white">
-          <option v-for="symbol in SYMBOLS" :key="symbol" :value="symbol">{{ symbol }}</option>
-        </select>
-        <select v-model="selectedBenchmark" class="bg-panel border border-white/20 rounded px-3 py-1 text-white">
-          <option v-for="bm in BENCHMARKS" :key="bm" :value="bm">{{ bm }}</option>
-        </select>
+        <div>
+          <input
+            v-model="symbolInput"
+            list="relative-symbols"
+            class="bg-panel border border-white/20 rounded px-3 py-1 text-white uppercase"
+            placeholder="Symbol"
+          />
+          <datalist id="relative-symbols">
+            <option v-for="symbol in SYMBOLS" :key="symbol" :value="symbol" />
+          </datalist>
+        </div>
+        <div>
+          <input
+            v-model="benchmarkInput"
+            list="relative-benchmarks"
+            class="bg-panel border border-white/20 rounded px-3 py-1 text-white uppercase"
+            placeholder="Benchmark"
+          />
+          <datalist id="relative-benchmarks">
+            <option v-for="bm in BENCHMARKS" :key="bm" :value="bm" />
+          </datalist>
+        </div>
         <TimeRangeSelector v-model="rangeKey" :options="['6M', '1Y', '2Y']" />
       </div>
     </div>
