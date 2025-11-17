@@ -22,7 +22,9 @@ const { data, refetch } = useQuery({
 watch([selectedSymbol, rangeKey], () => refetch());
 
 let chart: IChartApi | null = null;
-let drawdownSeries: AreaSeries | null = null;
+let fillAreaSeries: AreaSeries | null = null;
+let maskAreaSeries: AreaSeries | null = null;
+let drawdownLineSeries: LineSeries | null = null;
 let priceSeries: LineSeries | null = null;
 let baselineSeries: LineSeries | null = null;
 let observer: ResizeObserver | null = null;
@@ -40,7 +42,7 @@ const initChart = () => {
     leftPriceScale: {
       borderVisible: false,
       autoScale: true,
-      scaleMargins: { top: 0.1, bottom: 0.1 },
+      scaleMargins: { top: 0.05, bottom: 0.05 },
     },
     rightPriceScale: {
       borderVisible: false,
@@ -56,12 +58,22 @@ const initChart = () => {
     },
   });
 
-  drawdownSeries = chart.addAreaSeries({
+  fillAreaSeries = chart.addAreaSeries({
     priceScaleId: 'left',
-    lineColor: '#1d4ed8',
-    topColor: 'rgba(37,99,235,0.7)',
-    bottomColor: 'rgba(37,99,235,0.1)',
-    lineWidth: 1,
+    lineColor: 'rgba(37,99,235,0)',
+    topColor: 'rgba(37,99,235,0.85)',
+    bottomColor: 'rgba(37,99,235,0.85)',
+  });
+  maskAreaSeries = chart.addAreaSeries({
+    priceScaleId: 'left',
+    lineColor: '#050505',
+    topColor: '#050505',
+    bottomColor: '#050505',
+  });
+  drawdownLineSeries = chart.addLineSeries({
+    priceScaleId: 'left',
+    color: '#f87171',
+    lineWidth: 2,
   });
   priceSeries = chart.addLineSeries({
     priceScaleId: 'right',
@@ -87,6 +99,11 @@ const disposeChart = () => {
   observer = null;
   chart?.remove();
   chart = null;
+  fillAreaSeries = null;
+  maskAreaSeries = null;
+  drawdownLineSeries = null;
+  priceSeries = null;
+  baselineSeries = null;
 };
 
 onBeforeUnmount(disposeChart);
@@ -98,8 +115,21 @@ watch(
     if (!chart) {
       initChart();
     }
-    if (!chart || !drawdownSeries || !priceSeries || !baselineSeries) return;
-    drawdownSeries.setData(payload.drawdown.map((point) => ({ time: point.time, value: point.value })));
+    if (
+      !chart ||
+      !fillAreaSeries ||
+      !maskAreaSeries ||
+      !drawdownLineSeries ||
+      !priceSeries ||
+      !baselineSeries
+    ) {
+      return;
+    }
+
+    const drawdownData = payload.drawdown.map((point) => ({ time: point.time, value: point.value }));
+    fillAreaSeries.setData(drawdownData.map((point) => ({ time: point.time, value: 0 })));
+    maskAreaSeries.setData(drawdownData);
+    drawdownLineSeries.setData(drawdownData);
     priceSeries.setData(payload.price.map((point) => ({ time: point.time, value: point.value })));
     baselineSeries.setData(
       payload.drawdown.map((point) => ({
