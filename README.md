@@ -30,6 +30,16 @@ npm install
 npm run dev -- --host
 ```
 
+### Windows 一键启动
+如果已经按上面步骤装好依赖，可直接运行脚本同时启动前后端：
+
+```powershell
+cd <repo-root>
+powershell -ExecutionPolicy Bypass -File .\start-dev.ps1
+```
+
+脚本会分别在新的 PowerShell 窗口里启动 `uvicorn` 与 `npm run dev`，按提示回车即可同时结束两个进程。支持通过 `-BackendPort`、`-FrontendPort` 参数覆盖默认端口。
+
 ## Docker 部署
 
 ```bash
