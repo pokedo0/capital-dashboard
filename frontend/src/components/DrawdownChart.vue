@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { createChart, type IChartApi, type ISeriesApi, type MouseEventParams } from 'lightweight-charts';
+import { createChart, type IChartApi, type ISeriesApi, type MouseEventParams, type Time } from 'lightweight-charts';
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import { fetchDrawdown } from '../services/api';
@@ -26,6 +26,7 @@ let fillAreaSeries: AreaSeries | null = null;
 let maskAreaSeries: AreaSeries | null = null;
 let drawdownLineSeries: LineSeries | null = null;
 let priceSeries: LineSeries | null = null;
+let scaleAnchorSeries: LineSeries | null = null;
 let observer: ResizeObserver | null = null;
 
 type HoverInfo =
@@ -119,6 +120,13 @@ const initChart = () => {
     color: '#f78c1f',
     lineWidth: 2,
   });
+  scaleAnchorSeries = chart.addLineSeries({
+    priceScaleId: 'left',
+    color: 'rgba(0,0,0,0)',
+    lineWidth: 1,
+    priceLineVisible: false,
+    lastValueVisible: false,
+  });
 
   observer = new ResizeObserver(() => {
     if (chart && chartContainer.value) {
@@ -160,6 +168,7 @@ const disposeChart = () => {
   maskAreaSeries = null;
   drawdownLineSeries = null;
   priceSeries = null;
+  scaleAnchorSeries = null;
   crosshairHandler = null;
   hoverInfo.value = null;
 };
@@ -184,9 +193,27 @@ watch(
     }
 
     const drawdownData = payload.drawdown.map((point) => ({ time: point.time, value: point.value }));
+    const minValue = drawdownData.reduce((acc, point) => Math.min(acc, point.value ?? 0), 0);
+    const step = 5;
+    const lowerBound = Math.min(Math.floor(minValue / step) * step, -30);
+    axisLowerBound.value = lowerBound;
+
     fillAreaSeries.setData(drawdownData.map((point) => ({ time: point.time, value: 0 })));
     maskAreaSeries.setData(drawdownData);
     drawdownLineSeries.setData(drawdownData);
+    if (scaleAnchorSeries && drawdownData.length) {
+      const fallbackTime = new Date().toISOString().split('T')[0] as Time;
+      const firstTime =
+        (drawdownData[0]?.time ?? payload.price[0]?.time ?? fallbackTime) as Time;
+      const lastTime =
+        (drawdownData[drawdownData.length - 1]?.time ??
+          payload.price[payload.price.length - 1]?.time ??
+          firstTime) as Time;
+      scaleAnchorSeries.setData([
+        { time: firstTime, value: 0 },
+        { time: lastTime, value: lowerBound },
+      ]);
+    }
     priceSeries.setData(payload.price.map((point) => ({ time: point.time, value: point.value })));
     chart.timeScale().fitContent();
   },
@@ -195,17 +222,10 @@ watch(
 
 const currentDrawdown = computed(() => data.value?.current_drawdown ?? 0);
 const maxDrawdown = computed(() => data.value?.max_drawdown ?? 0);
+const axisLowerBound = ref(-40);
 const yAxisValues = computed(() => {
-  const points = data.value?.drawdown ?? [];
-  let minValue = points.reduce((acc, point) => Math.min(acc, point.value ?? 0), 0);
-  if (!Number.isFinite(minValue)) {
-    minValue = 0;
-  }
-  minValue = Math.min(minValue, -5);
-  const step = 5;
-  const lowerBound = Math.min(Math.floor(minValue / step) * step, -30);
   const values: number[] = [];
-  for (let value = 0; value >= lowerBound; value -= step) {
+  for (let value = 0; value >= axisLowerBound.value; value -= 5) {
     values.push(value);
   }
   return values;
@@ -242,7 +262,7 @@ const yAxisValues = computed(() => {
       <div ref="chartContainer" class="flex-1 h-full relative">
         <div
           v-if="hoverInfo"
-          class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none"
+          class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50 shadow-lg"
           :style="{
             left: `calc(${hoverInfo.position.x}px + 12px)`,
             top: `calc(${hoverInfo.position.y}px - 40px)`,
