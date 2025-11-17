@@ -89,7 +89,7 @@ const chartOptions: DeepPartial<ChartOptions> = {
 const measureSize = (element: HTMLElement) => {
   const rect = element.getBoundingClientRect();
   const width = rect.width || element.clientWidth || element.offsetWidth || 600;
-  const height = rect.height || element.clientHeight || element.offsetHeight || 320;
+  const height = rect.height || element.clientHeight || element.offsetHeight || 360;
   return { width, height };
 };
 
@@ -283,7 +283,7 @@ const attachCrosshair = (
         </button>
       </div>
     </div>
-    <div class="relative flex-1 w-full min-h-[320px]">
+    <div class="relative flex-1 w-full min-h-[360px]">
       <div ref="mainContainer" class="absolute inset-0"></div>
       <div
         v-if="hoverInfo"
@@ -299,7 +299,7 @@ const attachCrosshair = (
     <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
     <FullscreenModal :open="showFullscreen" title="S&P500 Price & Volume" @close="showFullscreen = false">
       <div class="flex flex-col gap-4 w-full h-full">
-        <div class="relative flex-1 min-h-[400px]">
+        <div class="relative flex-1 min-h-[420px]">
           <div ref="fullscreenContainer" class="absolute inset-0"></div>
           <div
             v-if="fullscreenHoverInfo"

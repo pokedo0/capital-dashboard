@@ -56,9 +56,14 @@ const extractValue = (point: unknown): number | undefined => {
   return undefined;
 };
 
-const initChart = (element: HTMLDivElement, height = 280) => {
-  return createChart(element, {
-    height,
+const measureHeight = (element: HTMLElement) => {
+  const rect = element.getBoundingClientRect();
+  return rect.height || element.clientHeight || element.offsetHeight || 360;
+};
+
+const initChart = (element: HTMLDivElement) => {
+  const chart = createChart(element, {
+    height: measureHeight(element),
     layout: {
       background: { color: '#050505' },
       textColor: '#f8fafc',
@@ -71,6 +76,8 @@ const initChart = (element: HTMLDivElement, height = 280) => {
     rightPriceScale: { borderVisible: false },
     timeScale: { borderVisible: false, timeVisible: true },
   });
+  chart.applyOptions({ width: element.clientWidth, height: measureHeight(element) });
+  return chart;
 };
 
 const ensureSeries = (chart: IChartApi | null, map: Map<string, LineSeries>, symbol: AssetSymbol) => {
@@ -108,7 +115,7 @@ const attachResize = (chart: IChartApi | null, container: HTMLDivElement | null,
   existing?.disconnect();
   if (!chart || !container) return null;
   const observer = new ResizeObserver(() => {
-    chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+    chart.applyOptions({ width: container.clientWidth, height: measureHeight(container) });
   });
   observer.observe(container);
   return observer;
@@ -145,7 +152,7 @@ const openFullscreen = async () => {
   showFullscreen.value = true;
   await nextTick();
   if (fullscreenContainer.value) {
-    fullscreenChart = initChart(fullscreenContainer.value, 420);
+    fullscreenChart = initChart(fullscreenContainer.value);
     fullscreenObserver = attachResize(fullscreenChart, fullscreenContainer.value, fullscreenObserver);
     applyData(fullscreenChart, fullscreenSeriesMap, fullscreenHoverInfo, 'fullscreen');
   }
@@ -243,7 +250,8 @@ const attachCrosshair = (
         </button>
       </div>
     </div>
-    <div ref="mainContainer" class="w-full h-[280px] relative">
+    <div class="relative flex-1 w-full min-h-[360px]">
+      <div ref="mainContainer" class="absolute inset-0"></div>
       <div
         v-if="hoverInfo"
         class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50 max-w-[220px]"

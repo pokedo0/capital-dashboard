@@ -52,7 +52,7 @@ let crosshairHandler: ((param: MouseEventParams) => void) | null = null;
 const measureSize = (element: HTMLElement) => {
   const rect = element.getBoundingClientRect();
   const width = rect.width || element.clientWidth || element.offsetWidth || 600;
-  const height = rect.height || element.clientHeight || element.offsetHeight || 320;
+  const height = rect.height || element.clientHeight || element.offsetHeight || 360;
   return { width, height };
 };
 
@@ -284,11 +284,11 @@ const symbolInput = computed({
         <TimeRangeSelector v-model="rangeKey" />
       </div>
     </div>
-    <div class="flex w-full min-h-[320px] gap-3">
+    <div class="flex w-full min-h-[360px] gap-3">
       <div class="w-14 flex flex-col justify-between text-xs text-textMuted pr-2 py-1">
         <span v-for="value in yAxisValues" :key="value">{{ value.toFixed(0) }}%</span>
       </div>
-      <div class="relative flex-1 min-h-[320px]">
+      <div class="relative flex-1 min-h-[360px]">
         <div ref="chartContainer" class="absolute inset-0"></div>
         <div
           v-if="hoverInfo"

@@ -41,7 +41,7 @@ const extractValue = (point: unknown): number | undefined => {
 const measureSize = (element: HTMLElement) => {
   const rect = element.getBoundingClientRect();
   const width = rect.width || element.clientWidth || element.offsetWidth || 600;
-  const height = rect.height || element.clientHeight || element.offsetHeight || 320;
+  const height = rect.height || element.clientHeight || element.offsetHeight || 360;
   return { width, height };
 };
 
@@ -178,7 +178,7 @@ const benchmarkInput = computed({
         <TimeRangeSelector v-model="rangeKey" :options="['6M', '1Y', '2Y']" />
       </div>
     </div>
-    <div class="relative w-full flex-1 min-h-[320px]">
+    <div class="relative w-full flex-1 min-h-[360px]">
       <div ref="chartContainer" class="absolute inset-0"></div>
       <div
         v-if="hoverInfo"
