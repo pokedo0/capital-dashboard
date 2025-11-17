@@ -35,10 +35,10 @@ npm run dev -- --host
 
 ```powershell
 cd <repo-root>
-powershell -ExecutionPolicy Bypass -File .\start-dev.ps1
+start-dev.bat
 ```
 
-脚本会分别在新的 PowerShell 窗口里启动 `uvicorn` 与 `npm run dev`，按提示回车即可同时结束两个进程。支持通过 `-BackendPort`、`-FrontendPort` 参数覆盖默认端口。
+脚本会新开两个命令行窗口分别运行后端 `uvicorn` 与前端 `npm run dev`，关闭任意窗口即可停止对应服务。也可以传入自定义端口：`start-dev.bat <backend_host> <backend_port> <frontend_port>`（均可选）。
 
 ## Docker 部署
 
