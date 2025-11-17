@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import {
+  type BusinessDay,
   type ChartOptions,
   createChart,
   type DeepPartial,
   type IChartApi,
   type ISeriesApi,
   type MouseEventParams,
+  type Time,
 } from 'lightweight-charts';
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
@@ -64,12 +66,41 @@ const fullscreenHoverInfo = ref<
 >(null);
 let mainCrosshairHandler: ((param: MouseEventParams) => void) | null = null;
 let fullscreenCrosshairHandler: ((param: MouseEventParams) => void) | null = null;
+const priceSeriesData = ref<{ time: string; value: number }[]>([]);
+const averageSeriesData = ref<{ time: string; value: number }[]>([]);
+const volumeSeriesData = ref<{ time: string; value: number; color: string }[]>([]);
+const priceValueMap = ref<Map<string, number>>(new Map());
+const averageValueMap = ref<Map<string, number>>(new Map());
+const volumeValueMap = ref<Map<string, number>>(new Map());
 const extractValue = (point: unknown): number | undefined => {
   if (typeof point === 'object' && point && 'value' in point) {
     const value = (point as { value?: number }).value;
     return typeof value === 'number' ? value : undefined;
   }
   return undefined;
+};
+
+const normalizeTimeLabel = (time: Time | string | number | BusinessDay): string => {
+  if (typeof time === 'string') {
+    return time;
+  }
+  if (typeof time === 'number') {
+    return new Date(time * 1000).toISOString().split('T')[0] || '';
+  }
+  if (typeof time === 'object' && time !== null) {
+    const day = String(time.day).padStart(2, '0');
+    const month = String(time.month).padStart(2, '0');
+    return `${time.year}-${month}-${day}`;
+  }
+  return '';
+};
+
+const valueWithFallback = (point: unknown, map: Map<string, number>, key: string): number | undefined => {
+  const direct = extractValue(point);
+  if (typeof direct === 'number') {
+    return direct;
+  }
+  return map.get(key);
 };
 
 const chartOptions: DeepPartial<ChartOptions> = {
@@ -144,20 +175,16 @@ const destroyBundle = (bundle: ChartBundle | null) => {
 
 const applyData = (
   bundle: ChartBundle | null,
-  points: OHLCVPoint[],
+  priceData: { time: string; value: number }[],
+  averageData: { time: string; value: number }[],
+  volumeData: { time: string; value: number; color: string }[],
   hoverTarget?: typeof hoverInfo,
   type?: 'main' | 'fullscreen',
 ) => {
   if (!bundle) return;
-  bundle.priceSeries.setData(points.map((p) => ({ time: p.time, value: p.close ?? 0 })));
-  bundle.averageSeries.setData(buildMovingAverage(points, 30));
-  bundle.volumeSeries.setData(
-    points.map((p) => ({
-      time: p.time,
-      value: (p.volume ?? 0),
-      color: '#2563eb',
-    })),
-  );
+  bundle.priceSeries.setData(priceData);
+  bundle.averageSeries.setData(averageData);
+  bundle.volumeSeries.setData(volumeData);
   bundle.chart.timeScale().fitContent();
   syncVisibility(bundle);
   if (hoverTarget && type) {
@@ -177,12 +204,25 @@ watch(
   () => data.value,
   (payload) => {
     if (!payload) return;
+    const priceData = payload.points.map((point) => ({ time: point.time, value: point.close ?? 0 }));
+    const averageData = buildMovingAverage(payload.points, 30);
+    const volumeData = payload.points.map((point) => ({
+      time: point.time,
+      value: point.volume ?? 0,
+      color: '#2563eb',
+    }));
+    priceSeriesData.value = priceData;
+    averageSeriesData.value = averageData;
+    volumeSeriesData.value = volumeData;
+    priceValueMap.value = new Map(priceData.map((point) => [point.time, point.value]));
+    averageValueMap.value = new Map(averageData.map((point) => [point.time, point.value]));
+    volumeValueMap.value = new Map(volumeData.map((point) => [point.time, point.value]));
     if (mainContainer.value && !mainBundle.value) {
       mainBundle.value = createBundle(mainContainer.value);
     }
-    applyData(mainBundle.value, payload.points, hoverInfo, 'main');
+    applyData(mainBundle.value, priceData, averageData, volumeData, hoverInfo, 'main');
     if (showFullscreen.value && fullscreenBundle.value) {
-      applyData(fullscreenBundle.value, payload.points, fullscreenHoverInfo, 'fullscreen');
+      applyData(fullscreenBundle.value, priceData, averageData, volumeData, fullscreenHoverInfo, 'fullscreen');
     }
   },
   { immediate: true },
@@ -198,8 +238,15 @@ const openFullscreen = async () => {
   await nextTick();
   if (fullscreenContainer.value) {
     fullscreenBundle.value = createBundle(fullscreenContainer.value);
-    if (data.value) {
-      applyData(fullscreenBundle.value, data.value.points, fullscreenHoverInfo, 'fullscreen');
+    if (priceSeriesData.value.length) {
+      applyData(
+        fullscreenBundle.value,
+        priceSeriesData.value,
+        averageSeriesData.value,
+        volumeSeriesData.value,
+        fullscreenHoverInfo,
+        'fullscreen',
+      );
     }
   }
 };
@@ -256,15 +303,15 @@ const attachCrosshair = (
     const pricePoint = param.seriesData.get(bundle.priceSeries);
     const averagePoint = param.seriesData.get(bundle.averageSeries);
     const volumePoint = param.seriesData.get(bundle.volumeSeries);
-    const time =
-      typeof param.time === 'string'
-        ? param.time
-        : new Date((param.time as number) * 1000).toISOString().split('T')[0] || '';
+    const time = normalizeTimeLabel(param.time as Time | BusinessDay | string | number);
+    const priceValue = valueWithFallback(pricePoint, priceValueMap.value, time);
+    const averageValue = valueWithFallback(averagePoint, averageValueMap.value, time);
+    const volumeValue = valueWithFallback(volumePoint, volumeValueMap.value, time);
     hoverTarget.value = {
       time,
-      price: extractValue(pricePoint),
-      average: extractValue(averagePoint),
-      volume: extractValue(volumePoint),
+      price: priceValue,
+      average: averageValue,
+      volume: volumeValue,
       position: { x: param.point.x, y: param.point.y },
     };
   };
