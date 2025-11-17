@@ -10,7 +10,7 @@ type LineSeries = ISeriesApi<'Line'>;
 
 const SYMBOLS = ['SPY', 'TSLA', 'NVDA', 'AAPL', 'MSFT', 'META'];
 
-const selectedSymbol = ref('TSLA');
+const selectedSymbol = ref('SPY');
 const rangeKey = ref('1Y');
 const chartContainer = ref<HTMLDivElement | null>(null);
 
@@ -57,6 +57,11 @@ const initChart = () => {
       vertLines: { color: 'rgba(255,255,255,0.05)' },
     },
   });
+  chart.priceScale('left').applyOptions({
+    borderVisible: false,
+    scaleMargins: { top: 0.02, bottom: 0.02 },
+    entireTextOnly: true,
+  });
 
   fillAreaSeries = chart.addAreaSeries({
     priceScaleId: 'left',
@@ -74,6 +79,11 @@ const initChart = () => {
     priceScaleId: 'left',
     color: 'rgba(248,113,113,0.0001)',
     lineWidth: 2,
+    priceFormat: {
+      type: 'custom',
+      formatter: (price: number) => `${price.toFixed(0)}%`,
+      minMove: 0.01,
+    },
   });
   priceSeries = chart.addLineSeries({
     priceScaleId: 'right',
