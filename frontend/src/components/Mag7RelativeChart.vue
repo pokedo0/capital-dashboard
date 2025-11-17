@@ -95,6 +95,13 @@ const ensureSeries = (chart: IChartApi | null, map: Map<string, LineSeries>, sym
   return series;
 };
 
+const resetViewport = (chart: IChartApi | null) => {
+  if (!chart) return;
+  chart.timeScale().resetTimeScale();
+  chart.timeScale().fitContent();
+  chart.priceScale('right').applyOptions({ autoScale: true });
+};
+
 const applyRelativeData = (chart: IChartApi | null, map: Map<string, LineSeries>) => {
   if (!chart || !data.value) return;
   data.value.forEach((seriesData) => {
@@ -102,8 +109,8 @@ const applyRelativeData = (chart: IChartApi | null, map: Map<string, LineSeries>
     const series = ensureSeries(chart, map, seriesData.symbol);
     series?.setData(seriesData.points.map((point) => ({ time: point.time, value: point.value })));
   });
-  chart.timeScale().fitContent();
   syncLegend(map);
+  resetViewport(chart);
   if (chart === mainChart) {
     attachCrosshair();
   }
