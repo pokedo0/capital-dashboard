@@ -4,7 +4,7 @@ import MarketHeader from './components/MarketHeader.vue';
 import Sp500PriceVolumeChart from './components/Sp500PriceVolumeChart.vue';
 import SectorTable from './components/SectorTable.vue';
 import Mag7RelativeChart from './components/Mag7RelativeChart.vue';
-import Mag7DailyBars from './components/Mag7DailyBars.vue';
+import Mag7HistogramPerformance from './components/Mag7HistogramPerformance.vue';
 import MultiAssetComparisonChart from './components/MultiAssetComparisonChart.vue';
 import DrawdownChart from './components/DrawdownChart.vue';
 import RelativeComparisonChart from './components/RelativeComparisonChart.vue';
@@ -35,10 +35,15 @@ const { data: nasdaqSummary } = useQuery({
     </section>
 
     <section class="space-y-4">
-      <MarketHeader title="NASDAQ 100 Dashboard" subtitle="Mag 7 Focus" variant="secondary" :summary="nasdaqSummary" />
+      <MarketHeader
+        title="NASDAQ 100 Dashboard"
+        subtitle="Mag 7 Focus"
+        variant="secondary"
+        :summary="nasdaqSummary"
+      />
       <div class="grid gap-6 xl:grid-cols-2">
         <Mag7RelativeChart />
-        <Mag7DailyBars />
+        <Mag7HistogramPerformance />
       </div>
     </section>
 
