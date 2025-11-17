@@ -33,7 +33,7 @@ const { data: sp500Summary } = useQuery({
     </section>
 
     <section class="space-y-4">
-      <div class="text-3xl text-accentCyan font-semibold uppercase tracking-widest">Mag 7 Focus</div>
+      <div class="text-2xl text-accentCyan font-semibold uppercase">Mag 7 Focus</div>
       <div class="grid gap-6 xl:grid-cols-2">
         <Mag7RelativeChart />
         <Mag7HistogramPerformance />
