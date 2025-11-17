@@ -6,6 +6,8 @@ import SectorTable from './components/SectorTable.vue';
 import Mag7RelativeChart from './components/Mag7RelativeChart.vue';
 import Mag7DailyBars from './components/Mag7DailyBars.vue';
 import MultiAssetComparisonChart from './components/MultiAssetComparisonChart.vue';
+import DrawdownChart from './components/DrawdownChart.vue';
+import RelativeComparisonChart from './components/RelativeComparisonChart.vue';
 import { fetchMarketSummary } from './services/api';
 
 const { data: sp500Summary } = useQuery({
@@ -42,6 +44,11 @@ const { data: nasdaqSummary } = useQuery({
 
     <section>
       <MultiAssetComparisonChart />
+    </section>
+
+    <section class="grid gap-6 xl:grid-cols-2">
+      <DrawdownChart />
+      <RelativeComparisonChart />
     </section>
   </div>
 </template>

@@ -58,6 +58,7 @@ docker compose up --build -d
 - 内存缓存：自建 TTL cache（60s），保证 512MB VPS 内足够轻量
 - SQLite 持久化 1~5 年历史数据
 - Vue 组件复刻截图中所有图表功能，支持时间范围切换、legend 显隐、全屏放大
+- Drawdown、Relative charts：新增股票回撤图 + 股票相对基准图，支持自选标的
 - Tailwind + 自定义暗色主题，移动端响应式布局
 
 更多细节可参见 `backend/README.md` 与前端源码注释。

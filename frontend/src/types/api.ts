@@ -49,3 +49,22 @@ export interface DailyPerformanceItem {
   change_pct: number;
   latest_close: number;
 }
+
+export interface ValuePoint {
+  time: string;
+  value: number;
+}
+
+export interface DrawdownResponse {
+  symbol: string;
+  drawdown: ValuePoint[];
+  price: ValuePoint[];
+  current_drawdown: number;
+}
+
+export interface RelativeToResponse {
+  symbol: string;
+  benchmark: string;
+  ratio: ValuePoint[];
+  moving_average: ValuePoint[];
+}

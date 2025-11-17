@@ -1,8 +1,10 @@
 import axios from 'axios';
 import type {
   DailyPerformanceItem,
+  DrawdownResponse,
   MarketSummary,
   RelativeSeries,
+  RelativeToResponse,
   SectorSummaryResponse,
   SeriesPayload,
 } from '../types/api';
@@ -39,6 +41,27 @@ export const fetchSectorSummary = async (): Promise<SectorSummaryResponse> => {
 export const fetchDailyPerformance = async (symbols: string[]): Promise<DailyPerformanceItem[]> => {
   const { data } = await api.get<DailyPerformanceItem[]>('/api/performance/daily', {
     params: { symbols: symbols.join(',') },
+  });
+  return data;
+};
+
+export const fetchDrawdown = async (
+  symbol: string,
+  range = '1Y',
+): Promise<DrawdownResponse> => {
+  const { data } = await api.get<DrawdownResponse>('/api/performance/drawdown', {
+    params: { symbol, range },
+  });
+  return data;
+};
+
+export const fetchRelativeTo = async (
+  symbol: string,
+  benchmark: string,
+  range = '1Y',
+): Promise<RelativeToResponse> => {
+  const { data } = await api.get<RelativeToResponse>('/api/performance/relative-to', {
+    params: { symbol, benchmark, range },
   });
   return data;
 };

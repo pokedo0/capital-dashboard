@@ -9,11 +9,14 @@ from sqlmodel import Session, select
 
 from ..models.price import PriceRecord
 from ..schemas.market import (
+    DrawdownResponse,
     MarketSummary,
     OHLCVPoint,
+    RelativeToResponse,
     SectorItem,
     SectorSummaryResponse,
     SeriesPayload,
+    ValuePoint,
 )
 from .time_ranges import resolve_range_end, resolve_range_start
 from .yahoo_client import fetch_and_store
@@ -114,6 +117,93 @@ def get_daily_performance(session: Session, symbols: List[str]) -> List[Dict]:
             }
         )
     return results
+
+
+def get_drawdown_series(session: Session, symbol: str, range_key: str) -> DrawdownResponse:
+    start = resolve_range_start(range_key)
+    end = resolve_range_end()
+    ensure_history(session, symbol, start, end)
+    records = (
+        session.exec(
+            select(PriceRecord)
+            .where(PriceRecord.symbol == symbol)
+            .where(PriceRecord.trade_date.between(start, end))
+            .order_by(PriceRecord.trade_date)
+        )
+        .unique()
+        .all()
+    )
+    drawdown_points: List[ValuePoint] = []
+    price_points: List[ValuePoint] = []
+    peak = 0.0
+    current_drawdown = 0.0
+    for record in records:
+        if record.close is None:
+            continue
+        price_points.append(ValuePoint(time=record.trade_date, value=record.close))
+        peak = max(peak, record.close)
+        if peak == 0:
+            continue
+        value = (record.close / peak - 1.0) * 100
+        current_drawdown = value
+        drawdown_points.append(ValuePoint(time=record.trade_date, value=value))
+    return DrawdownResponse(
+        symbol=symbol,
+        drawdown=drawdown_points,
+        price=price_points,
+        current_drawdown=current_drawdown,
+    )
+
+
+def get_relative_to_series(
+    session: Session, symbol: str, benchmark: str, range_key: str
+) -> RelativeToResponse:
+    start = resolve_range_start(range_key)
+    end = resolve_range_end()
+    ensure_history(session, symbol, start, end)
+    ensure_history(session, benchmark, start, end)
+
+    symbol_rows = session.exec(
+        select(PriceRecord)
+        .where(PriceRecord.symbol == symbol)
+        .where(PriceRecord.trade_date.between(start, end))
+        .order_by(PriceRecord.trade_date)
+    ).all()
+    benchmark_rows = session.exec(
+        select(PriceRecord)
+        .where(PriceRecord.symbol == benchmark)
+        .where(PriceRecord.trade_date.between(start, end))
+        .order_by(PriceRecord.trade_date)
+    ).all()
+    benchmark_map = {row.trade_date: row.close for row in benchmark_rows if row.close}
+
+    ratio_points: List[ValuePoint] = []
+    values: List[float] = []
+    for row in symbol_rows:
+        if not row.close:
+            continue
+        bench_close = benchmark_map.get(row.trade_date)
+        if not bench_close:
+            continue
+        ratio = (row.close / bench_close) * 100
+        values.append(ratio)
+        ratio_points.append(ValuePoint(time=row.trade_date, value=ratio))
+
+    moving_average: List[ValuePoint] = []
+    window = 30
+    for index, value in enumerate(values):
+        if index + 1 < window:
+            continue
+        window_slice = values[index + 1 - window : index + 1]
+        avg = sum(window_slice) / window
+        moving_average.append(ValuePoint(time=ratio_points[index].time, value=avg))
+
+    return RelativeToResponse(
+        symbol=symbol,
+        benchmark=benchmark,
+        ratio=ratio_points,
+        moving_average=moving_average,
+    )
 
 
 def _latest_two_records(session: Session, symbol: str) -> List[PriceRecord]:

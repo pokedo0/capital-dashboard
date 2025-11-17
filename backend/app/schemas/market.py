@@ -38,3 +38,22 @@ class SectorItem(BaseModel):
 
 class SectorSummaryResponse(BaseModel):
     sectors: List[SectorItem]
+
+
+class ValuePoint(BaseModel):
+    time: date
+    value: float
+
+
+class DrawdownResponse(BaseModel):
+    symbol: str
+    drawdown: List[ValuePoint]
+    price: List[ValuePoint]
+    current_drawdown: float
+
+
+class RelativeToResponse(BaseModel):
+    symbol: str
+    benchmark: str
+    ratio: List[ValuePoint]
+    moving_average: List[ValuePoint]

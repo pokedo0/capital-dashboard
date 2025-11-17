@@ -8,11 +8,19 @@ from sqlmodel import Session
 
 from .core.config import get_settings
 from .db import get_session, init_db, session_scope
-from .schemas.market import MarketSummary, SectorSummaryResponse, SeriesPayload
+from .schemas.market import (
+    DrawdownResponse,
+    MarketSummary,
+    RelativeToResponse,
+    SectorSummaryResponse,
+    SeriesPayload,
+)
 from .services.market_data import (
     get_daily_performance,
+    get_drawdown_series,
     get_market_summary,
     get_ohlcv_series,
+    get_relative_to_series,
     get_relative_performance,
     get_sector_summary,
 )
@@ -29,6 +37,8 @@ relative_cache: TTLCache[List[dict]] = TTLCache(settings.cache_ttl_seconds)
 daily_cache: TTLCache[List[dict]] = TTLCache(settings.cache_ttl_seconds)
 market_cache: TTLCache[MarketSummary] = TTLCache(settings.cache_ttl_seconds)
 sector_cache: TTLCache[SectorSummaryResponse] = TTLCache(settings.cache_ttl_seconds)
+drawdown_cache: TTLCache[DrawdownResponse] = TTLCache(settings.cache_ttl_seconds)
+relative_to_cache: TTLCache[RelativeToResponse] = TTLCache(settings.cache_ttl_seconds)
 
 app.add_middleware(
     CORSMiddleware,
@@ -63,6 +73,8 @@ def daily_refresh_job() -> None:
     daily_cache.clear()
     market_cache.clear()
     sector_cache.clear()
+    drawdown_cache.clear()
+    relative_to_cache.clear()
 
 
 @app.on_event("startup")
@@ -135,6 +147,38 @@ def api_daily_performance(
         raise HTTPException(status_code=400, detail="symbols parameter required")
     key = ("daily", ",".join(symbol_list))
     return daily_cache.get_or_set(key, lambda: get_daily_performance(session, symbol_list))
+
+
+@app.get("/api/performance/drawdown", response_model=DrawdownResponse)
+def api_drawdown(
+    symbol: str = Query(..., description="Ticker symbol"),
+    range_key: str = Query("1Y", alias="range"),
+    session: Session = Depends(get_session),
+) -> DrawdownResponse:
+    cache_key = (symbol.upper(), range_key.upper())
+    try:
+        return drawdown_cache.get_or_set(
+            cache_key, lambda: get_drawdown_series(session, symbol.upper(), range_key)
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/performance/relative-to", response_model=RelativeToResponse)
+def api_relative_to(
+    symbol: str = Query(..., description="Primary ticker"),
+    benchmark: str = Query(..., description="Benchmark ticker"),
+    range_key: str = Query("1Y", alias="range"),
+    session: Session = Depends(get_session),
+) -> RelativeToResponse:
+    cache_key = (symbol.upper(), benchmark.upper(), range_key.upper())
+    try:
+        return relative_to_cache.get_or_set(
+            cache_key,
+            lambda: get_relative_to_series(session, symbol.upper(), benchmark.upper(), range_key),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/market/summary", response_model=MarketSummary)
