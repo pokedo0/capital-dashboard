@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { createChart, type IChartApi, type ISeriesApi } from 'lightweight-charts';
+import { createChart, type IChartApi, type ISeriesApi, type MouseEventParams } from 'lightweight-charts';
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import { fetchDrawdown } from '../services/api';
@@ -26,8 +26,27 @@ let fillAreaSeries: AreaSeries | null = null;
 let maskAreaSeries: AreaSeries | null = null;
 let drawdownLineSeries: LineSeries | null = null;
 let priceSeries: LineSeries | null = null;
-let baselineSeries: LineSeries | null = null;
 let observer: ResizeObserver | null = null;
+
+type HoverInfo =
+  | {
+      time: string;
+      drawdown?: number;
+      price?: number;
+      position: { x: number; y: number };
+    }
+  | null;
+const hoverInfo = ref<HoverInfo>(null);
+
+const resolveValue = (point: unknown): number | undefined => {
+  if (typeof point === 'object' && point && 'value' in point) {
+    const value = (point as { value?: number }).value;
+    return typeof value === 'number' ? value : undefined;
+  }
+  return undefined;
+};
+
+let crosshairHandler: ((param: MouseEventParams) => void) | null = null;
 
 const initChart = () => {
   if (!chartContainer.value) return;
@@ -100,11 +119,6 @@ const initChart = () => {
     color: '#f78c1f',
     lineWidth: 2,
   });
-  baselineSeries = chart.addLineSeries({
-    priceScaleId: 'left',
-    color: '#ef4444',
-    lineWidth: 2,
-  });
 
   observer = new ResizeObserver(() => {
     if (chart && chartContainer.value) {
@@ -112,18 +126,42 @@ const initChart = () => {
     }
   });
   observer.observe(chartContainer.value);
+
+  crosshairHandler = (param: MouseEventParams) => {
+    if (!drawdownLineSeries || !priceSeries || !param.time || !param.point) {
+      hoverInfo.value = null;
+      return;
+    }
+    const drawdownPoint = param.seriesData.get(drawdownLineSeries);
+    const pricePoint = param.seriesData.get(priceSeries);
+    const time =
+      typeof param.time === 'string'
+        ? param.time
+        : new Date((param.time as number) * 1000).toISOString().split('T')[0] || '';
+    hoverInfo.value = {
+      time,
+      drawdown: resolveValue(drawdownPoint),
+      price: resolveValue(pricePoint),
+      position: { x: param.point.x, y: param.point.y },
+    };
+  };
+  chart.subscribeCrosshairMove(crosshairHandler);
 };
 
 const disposeChart = () => {
   observer?.disconnect();
   observer = null;
+  if (chart && crosshairHandler) {
+    chart.unsubscribeCrosshairMove(crosshairHandler);
+  }
   chart?.remove();
   chart = null;
   fillAreaSeries = null;
   maskAreaSeries = null;
   drawdownLineSeries = null;
   priceSeries = null;
-  baselineSeries = null;
+  crosshairHandler = null;
+  hoverInfo.value = null;
 };
 
 onBeforeUnmount(disposeChart);
@@ -140,8 +178,7 @@ watch(
       !fillAreaSeries ||
       !maskAreaSeries ||
       !drawdownLineSeries ||
-      !priceSeries ||
-      !baselineSeries
+      !priceSeries
     ) {
       return;
     }
@@ -151,12 +188,6 @@ watch(
     maskAreaSeries.setData(drawdownData);
     drawdownLineSeries.setData(drawdownData);
     priceSeries.setData(payload.price.map((point) => ({ time: point.time, value: point.value })));
-    baselineSeries.setData(
-      payload.drawdown.map((point) => ({
-        time: point.time,
-        value: -30,
-      })),
-    );
     chart.timeScale().fitContent();
   },
   { immediate: true },
@@ -209,11 +240,17 @@ const yAxisValues = computed(() => {
         <span v-for="value in yAxisValues" :key="value">{{ value.toFixed(0) }}%</span>
       </div>
       <div ref="chartContainer" class="flex-1 h-full relative">
-        <div class="absolute top-4 left-1/2 -translate-x-1/2 text-accentRed text-sm font-semibold">
-          Baseline -30%
-        </div>
-        <div class="absolute top-12 right-4 text-white text-sm font-semibold">
-          {{ currentDrawdown.toFixed(2) }}%
+        <div
+          v-if="hoverInfo"
+          class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none"
+          :style="{
+            left: `calc(${hoverInfo.position.x}px + 12px)`,
+            top: `calc(${hoverInfo.position.y}px - 40px)`,
+          }"
+        >
+          <div>{{ hoverInfo.time }}</div>
+          <div>Drawdown: {{ hoverInfo.drawdown?.toFixed(2) ?? '--' }}%</div>
+          <div>Price: {{ hoverInfo.price?.toFixed(2) ?? '--' }}</div>
         </div>
       </div>
     </div>
@@ -223,9 +260,6 @@ const yAxisValues = computed(() => {
       </span>
       <span class="flex items-center gap-2">
         <span class="w-4 h-1 bg-[#f78c1f] rounded-full"></span> Price ($)
-      </span>
-      <span class="flex items-center gap-2">
-        <span class="w-4 h-1 bg-[#ef4444] rounded-full"></span> Baseline -30%
       </span>
     </div>
   </div>
