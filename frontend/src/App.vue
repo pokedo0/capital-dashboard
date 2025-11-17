@@ -43,6 +43,7 @@ const { data: nasdaqSummary } = useQuery({
         subtitle="Mag 7 Focus"
         variant="secondary"
         :summary="nasdaqSummary"
+        :show-date="false"
       />
       <div class="grid gap-6 xl:grid-cols-2">
         <Mag7RelativeChart />

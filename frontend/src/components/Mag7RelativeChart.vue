@@ -59,9 +59,10 @@ const extractValue = (point: unknown): number | undefined => {
   return undefined;
 };
 
-const initChart = (container: HTMLDivElement, height = 360): IChartApi => {
+const initChart = (container: HTMLDivElement): IChartApi => {
+  const chartHeight = container.clientHeight || 360;
   return createChart(container, {
-    height,
+    height: chartHeight,
     layout: {
       background: { color: '#050505' },
       textColor: '#f8fafc',
@@ -147,7 +148,7 @@ const openFullscreen = async () => {
   showFullscreen.value = true;
   await nextTick();
   if (fullscreenContainer.value) {
-    fullscreenChart = initChart(fullscreenContainer.value, 480);
+    fullscreenChart = initChart(fullscreenContainer.value);
     fullscreenObserver = attachResize(fullscreenChart, fullscreenContainer.value, fullscreenObserver);
     applyRelativeData(fullscreenChart, fullscreenSeriesMap);
   }

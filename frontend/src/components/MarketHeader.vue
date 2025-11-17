@@ -7,6 +7,7 @@ const props = defineProps<{
   subtitle: string;
   summary?: MarketSummary;
   variant?: 'primary' | 'secondary';
+  showDate?: boolean;
 }>();
 
 const formattedDate = computed(() => {
@@ -30,7 +31,7 @@ const vixChangeClass = computed(() =>
 
 <template>
   <div class="w-full">
-    <div class="text-accentOrange text-xl font-semibold tracking-wide">
+    <div v-if="showDate !== false" class="text-accentOrange text-xl font-semibold tracking-wide">
       {{ formattedDate || 'Loading...' }}
     </div>
     <div
