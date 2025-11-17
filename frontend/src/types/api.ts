@@ -60,6 +60,7 @@ export interface DrawdownResponse {
   drawdown: ValuePoint[];
   price: ValuePoint[];
   current_drawdown: number;
+  max_drawdown: number;
 }
 
 export interface RelativeToResponse {

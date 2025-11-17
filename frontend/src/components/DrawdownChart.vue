@@ -68,12 +68,22 @@ const initChart = () => {
     lineColor: 'rgba(37,99,235,0)',
     topColor: 'rgba(37,99,235,0.85)',
     bottomColor: 'rgba(37,99,235,0.85)',
+    priceFormat: {
+      type: 'custom',
+      formatter: (price: number) => `${price.toFixed(0)}%`,
+      minMove: 0.01,
+    },
   });
   maskAreaSeries = chart.addAreaSeries({
     priceScaleId: 'left',
     lineColor: '#050505',
     topColor: '#050505',
     bottomColor: '#050505',
+    priceFormat: {
+      type: 'custom',
+      formatter: (price: number) => `${price.toFixed(0)}%`,
+      minMove: 0.01,
+    },
   });
   drawdownLineSeries = chart.addLineSeries({
     priceScaleId: 'left',
@@ -153,6 +163,7 @@ watch(
 );
 
 const currentDrawdown = computed(() => data.value?.current_drawdown ?? 0);
+const maxDrawdown = computed(() => data.value?.max_drawdown ?? 0);
 const yAxisValues = computed(() => {
   const points = data.value?.drawdown ?? [];
   let minValue = points.reduce((acc, point) => Math.min(acc, point.value ?? 0), 0);
@@ -161,7 +172,7 @@ const yAxisValues = computed(() => {
   }
   minValue = Math.min(minValue, -5);
   const step = 5;
-  const lowerBound = Math.floor(minValue / step) * step;
+  const lowerBound = Math.min(Math.floor(minValue / step) * step, -30);
   const values: number[] = [];
   for (let value = 0; value >= lowerBound; value -= step) {
     values.push(value);
@@ -175,9 +186,15 @@ const yAxisValues = computed(() => {
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl font-semibold uppercase">{{ selectedSymbol }} Drawdown</div>
-        <div class="text-sm text-textMuted flex items-center gap-2">
-          <span>Current drawdown:</span>
-          <span class="text-white font-semibold">{{ currentDrawdown.toFixed(2) }}%</span>
+        <div class="text-sm text-textMuted flex items-center gap-3">
+          <span>
+            Current drawdown:
+            <span class="text-white font-semibold">{{ currentDrawdown.toFixed(2) }}%</span>
+          </span>
+          <span>
+            Max drawdown:
+            <span class="text-accentRed font-semibold">{{ maxDrawdown.toFixed(2) }}%</span>
+          </span>
         </div>
       </div>
       <div class="flex items-center gap-3">

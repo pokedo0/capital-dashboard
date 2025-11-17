@@ -137,21 +137,25 @@ def get_drawdown_series(session: Session, symbol: str, range_key: str) -> Drawdo
     price_points: List[ValuePoint] = []
     peak: float | None = None
     current_drawdown = 0.0
+    max_drawdown = 0.0
     for record in records:
         if record.close is None:
             continue
         price_points.append(ValuePoint(time=record.trade_date, value=record.close))
         peak = record.close if peak is None else max(peak, record.close)
-        if peak == 0:
+        if not peak:
             continue
-        value = min((record.close / peak - 1.0) * 100, 0.0)
-        current_drawdown = value
-        drawdown_points.append(ValuePoint(time=record.trade_date, value=value))
+        drawdown_value = (record.close - peak) / peak * 100
+        drawdown_value = min(drawdown_value, 0.0)
+        current_drawdown = drawdown_value
+        max_drawdown = min(max_drawdown, drawdown_value)
+        drawdown_points.append(ValuePoint(time=record.trade_date, value=drawdown_value))
     return DrawdownResponse(
         symbol=symbol,
         drawdown=drawdown_points,
         price=price_points,
         current_drawdown=current_drawdown,
+        max_drawdown=max_drawdown,
     )
 
 

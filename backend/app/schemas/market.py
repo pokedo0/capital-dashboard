@@ -50,6 +50,7 @@ class DrawdownResponse(BaseModel):
     drawdown: List[ValuePoint]
     price: List[ValuePoint]
     current_drawdown: float
+    max_drawdown: float
 
 
 class RelativeToResponse(BaseModel):
