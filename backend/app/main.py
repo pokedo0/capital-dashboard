@@ -10,6 +10,7 @@ from .core.config import get_settings
 from .db import get_session, init_db, session_scope
 from .schemas.market import (
     DrawdownResponse,
+    FearGreedResponse,
     MarketSummary,
     RelativeToResponse,
     SectorSummaryResponse,
@@ -18,6 +19,7 @@ from .schemas.market import (
 from .services.market_data import (
     get_daily_performance,
     get_drawdown_series,
+    get_fear_greed_comparison,
     get_market_summary,
     get_ohlcv_series,
     get_relative_to_series,
@@ -39,6 +41,7 @@ market_cache: TTLCache[MarketSummary] = TTLCache(settings.cache_ttl_seconds)
 sector_cache: TTLCache[SectorSummaryResponse] = TTLCache(settings.cache_ttl_seconds)
 drawdown_cache: TTLCache[DrawdownResponse] = TTLCache(settings.cache_ttl_seconds)
 relative_to_cache: TTLCache[RelativeToResponse] = TTLCache(settings.cache_ttl_seconds)
+fear_greed_cache: TTLCache[FearGreedResponse] = TTLCache(settings.cache_ttl_seconds)
 
 app.add_middleware(
     CORSMiddleware,
@@ -75,6 +78,7 @@ def daily_refresh_job() -> None:
     sector_cache.clear()
     drawdown_cache.clear()
     relative_to_cache.clear()
+    fear_greed_cache.clear()
 
 
 @app.on_event("startup")
@@ -195,3 +199,14 @@ def api_market_summary(
 @app.get("/api/sectors/summary", response_model=SectorSummaryResponse)
 def api_sector_summary(session: Session = Depends(get_session)) -> SectorSummaryResponse:
     return sector_cache.get_or_set("sectors", lambda: get_sector_summary(session))
+
+
+@app.get("/api/market/fear-greed", response_model=FearGreedResponse)
+def api_fear_greed(
+    range_key: str = Query("1Y", alias="range"), session: Session = Depends(get_session)
+) -> FearGreedResponse:
+    key = range_key.upper()
+    try:
+        return fear_greed_cache.get_or_set(key, lambda: get_fear_greed_comparison(session, range_key))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

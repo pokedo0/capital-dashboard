@@ -58,3 +58,8 @@ class RelativeToResponse(BaseModel):
     benchmark: str
     ratio: List[ValuePoint]
     moving_average: List[ValuePoint]
+
+
+class FearGreedResponse(BaseModel):
+    index: List[ValuePoint]
+    spy: List[ValuePoint]

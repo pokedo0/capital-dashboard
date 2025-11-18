@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
+import json
 import logging
 from typing import Dict, List, Sequence
+from urllib.error import URLError
+from urllib.request import urlopen
 
 from sqlalchemy import func
 from sqlmodel import Session, select
@@ -10,6 +13,7 @@ from sqlmodel import Session, select
 from ..models.price import PriceRecord
 from ..schemas.market import (
     DrawdownResponse,
+    FearGreedResponse,
     MarketSummary,
     OHLCVPoint,
     RelativeToResponse,
@@ -36,6 +40,8 @@ SECTOR_LABELS: Dict[str, str] = {
     "XLK": "Tech",
     "XLU": "Utilities",
 }
+
+FEAR_GREED_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
 
 
 def ensure_history(session: Session, symbol: str, start: date, end: date) -> None:
@@ -182,23 +188,27 @@ def get_relative_to_series(
     benchmark_map = {row.trade_date: row.close for row in benchmark_rows if row.close}
 
     ratio_points: List[ValuePoint] = []
-    values: List[float] = []
+    normalized_values: List[float] = []
+    base_ratio: float | None = None
     for row in symbol_rows:
-        if not row.close:
+        if row.close is None:
             continue
         bench_close = benchmark_map.get(row.trade_date)
-        if not bench_close:
+        if bench_close is None or bench_close == 0:
             continue
-        ratio = (row.close / bench_close) * 100
-        values.append(ratio)
-        ratio_points.append(ValuePoint(time=row.trade_date, value=ratio))
+        raw_ratio = row.close / bench_close
+        if base_ratio is None:
+            base_ratio = raw_ratio
+        normalized = (raw_ratio / base_ratio) * 100
+        normalized_values.append(normalized)
+        ratio_points.append(ValuePoint(time=row.trade_date, value=normalized))
 
     moving_average: List[ValuePoint] = []
-    window = 30
-    for index, value in enumerate(values):
+    window = 50
+    for index, value in enumerate(normalized_values):
         if index + 1 < window:
             continue
-        window_slice = values[index + 1 - window : index + 1]
+        window_slice = normalized_values[index + 1 - window : index + 1]
         avg = sum(window_slice) / window
         moving_average.append(ValuePoint(time=ratio_points[index].time, value=avg))
 
@@ -221,6 +231,56 @@ def _latest_two_records(session: Session, symbol: str) -> List[PriceRecord]:
         .unique()
         .all()
     )
+
+
+def _fetch_fear_greed_history() -> List[ValuePoint]:
+    try:
+        with urlopen(FEAR_GREED_URL, timeout=10) as response:
+            payload = json.load(response)
+    except URLError as exc:  # pragma: no cover - network error handling
+        logger.error("Failed to fetch Fear & Greed Index data: %s", exc)
+        raise ValueError("Unable to fetch Fear & Greed Index data") from exc
+    except Exception as exc:  # pragma: no cover - unexpected issues
+        logger.error("Unexpected error fetching Fear & Greed Index data: %s", exc)
+        raise ValueError("Unable to fetch Fear & Greed Index data") from exc
+    historical = payload.get("fear_and_greed_historical", [])
+    points: List[ValuePoint] = []
+    for item in historical:
+        timestamp = item.get("x")
+        value = item.get("y")
+        if timestamp is None or value is None:
+            continue
+        try:
+            time_value = datetime.utcfromtimestamp(timestamp / 1000).date()
+        except Exception:  # pragma: no cover - skip bad rows
+            continue
+        points.append(ValuePoint(time=time_value, value=float(value)))
+    return points
+
+
+def get_fear_greed_comparison(session: Session, range_key: str) -> FearGreedResponse:
+    start = resolve_range_start(range_key)
+    end = resolve_range_end()
+    index_points = [
+        point for point in _fetch_fear_greed_history() if start <= point.time <= end
+    ]
+    ensure_history(session, "SPY", start, end)
+    spy_records = (
+        session.exec(
+            select(PriceRecord)
+            .where(PriceRecord.symbol == "SPY")
+            .where(PriceRecord.trade_date.between(start, end))
+            .order_by(PriceRecord.trade_date)
+        )
+        .unique()
+        .all()
+    )
+    spy_points = [
+        ValuePoint(time=record.trade_date, value=record.close)
+        for record in spy_records
+        if record.close is not None
+    ]
+    return FearGreedResponse(index=index_points, spy=spy_points)
 
 
 def get_market_summary(session: Session, market: str) -> MarketSummary:

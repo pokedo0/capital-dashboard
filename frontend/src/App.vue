@@ -9,6 +9,7 @@ import Mag7HistogramPerformance from './components/Mag7HistogramPerformance.vue'
 import MultiAssetComparisonChart from './components/MultiAssetComparisonChart.vue';
 import DrawdownChart from './components/DrawdownChart.vue';
 import RelativeComparisonChart from './components/RelativeComparisonChart.vue';
+import FearGreedComparisonChart from './components/FearGreedComparisonChart.vue';
 import { fetchMarketSummary } from './services/api';
 
 const { data: sp500Summary } = useQuery({
@@ -51,7 +52,8 @@ const { data: nasdaqSummary } = useQuery({
         </div>
       </section>
 
-      <section>
+      <section class="space-y-6">
+        <FearGreedComparisonChart />
         <MultiAssetComparisonChart />
       </section>
 

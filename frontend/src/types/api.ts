@@ -69,3 +69,8 @@ export interface RelativeToResponse {
   ratio: ValuePoint[];
   moving_average: ValuePoint[];
 }
+
+export interface FearGreedResponse {
+  index: ValuePoint[];
+  spy: ValuePoint[];
+}

@@ -2,6 +2,7 @@ import axios from 'axios';
 import type {
   DailyPerformanceItem,
   DrawdownResponse,
+  FearGreedResponse,
   MarketSummary,
   RelativeSeries,
   RelativeToResponse,
@@ -62,6 +63,15 @@ export const fetchRelativeTo = async (
 ): Promise<RelativeToResponse> => {
   const { data } = await api.get<RelativeToResponse>('/api/performance/relative-to', {
     params: { symbol, benchmark, range },
+  });
+  return data;
+};
+
+export const fetchFearGreedComparison = async (
+  range = '1Y',
+): Promise<FearGreedResponse> => {
+  const { data } = await api.get<FearGreedResponse>('/api/market/fear-greed', {
+    params: { range },
   });
   return data;
 };
