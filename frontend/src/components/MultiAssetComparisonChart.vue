@@ -163,7 +163,7 @@ const applyData = (
     series?.setData(seriesData.points.map((point) => ({ time: point.time, value: point.value })));
   });
   chart.timeScale().fitContent();
-  chart.priceScale('right').setMode({ autoScale: true, mode: PriceScaleMode.Normal });
+  chart.priceScale('right').applyOptions({ autoScale: true, mode: PriceScaleMode.Normal });
   syncVisibility(map);
   attachCrosshair(chart, map, hoverTarget, type);
 };
