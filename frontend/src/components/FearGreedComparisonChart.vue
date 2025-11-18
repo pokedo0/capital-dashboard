@@ -29,8 +29,8 @@ watch(rangeKey, () => refetch());
 
 const FEAR_ZONES = [
   { value: 25, label: 'Extreme Fear', color: '#ef4444' },
-  { value: 45, label: 'Fear', color: '#f97316' },
-  { value: 55, label: 'Neutral', color: '#eab308' },
+  { value: 45, label: 'Fear', color: '#636e72' },
+  { value: 55, label: 'Neutral', color: '#636e72' },
   { value: 75, label: 'Greed', color: '#22c55e' },
 ];
 
@@ -101,11 +101,17 @@ const ensureSeries = (chart: IChartApi | null, type: 'fear' | 'spy'): LineSeries
   return chart.addLineSeries(options);
 };
 
-const tooltipStyle = (position: { x: number; y: number }) => ({
-  left: `${position.x + 16}px`,
-  top: `${position.y}px`,
-  transform: 'translateY(-50%)',
-});
+const tooltipStyle = (position: { x: number; y: number }, container: HTMLElement | null) => {
+  const containerHeight = container?.clientHeight ?? 0;
+  const offset = 12;
+  const minTop = offset;
+  const maxTop = containerHeight ? containerHeight - offset : position.y + offset;
+  const top = Math.min(Math.max(position.y + offset, minTop), maxTop);
+  return {
+    left: `${position.x + 16}px`,
+    top: `${top}px`,
+  };
+};
 
 const updateFearZones = (scope: 'main' | 'fullscreen') => {
   const isMain = scope === 'main';
@@ -410,7 +416,7 @@ const zoneBadges = [
       <div
         v-if="mainHover"
         class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50"
-        :style="tooltipStyle(mainHover.position)"
+        :style="tooltipStyle(mainHover.position, mainContainer)"
       >
         <div>{{ mainHover.time }}</div>
         <div class="flex justify-between gap-2">
@@ -453,7 +459,7 @@ const zoneBadges = [
         <div
           v-if="fullscreenHover"
           class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50"
-          :style="tooltipStyle(fullscreenHover.position)"
+          :style="tooltipStyle(fullscreenHover.position, fullscreenContainer)"
         >
           <div>{{ fullscreenHover.time }}</div>
           <div class="flex justify-between gap-2">
