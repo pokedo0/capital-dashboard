@@ -31,6 +31,29 @@ const HISTOGRAM_LABELS: Record<AssetSymbol, string> = {
   'BTC-USD': 'Bitcoin',
 };
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const downsampleWeekly = (points: { time: string; value: number }[]) => {
+  if (!points.length) return points;
+  const result: typeof points = [];
+  let lastTime: number | null = null;
+  points.forEach((point) => {
+    const current = new Date(point.time).getTime();
+    if (Number.isNaN(current)) {
+      result.push(point);
+      return;
+    }
+    if (lastTime === null || current - lastTime >= 7 * MS_PER_DAY) {
+      result.push(point);
+      lastTime = current;
+    } else {
+      result[result.length - 1] = point;
+      lastTime = current;
+    }
+  });
+  return result;
+};
+
 const { data, refetch } = useQuery({
   queryKey: computed(() => ['relative', 'multi', rangeKey.value]),
   queryFn: () => fetchRelativePerformance(SYMBOL_PARAMS, rangeKey.value),
@@ -54,10 +77,22 @@ const fullscreenHoverInfo = ref<
   | { time: string; entries: { label: string; color: string; value?: number }[]; position: { x: number; y: number } }
   | null
 >(null);
+const transformedSeries = computed(() => {
+  if (!data.value) return null;
+  return data.value.map((series) => {
+    let points = series.points;
+    if (rangeKey.value === '5Y') {
+      points = downsampleWeekly(series.points);
+    }
+    return { ...series, points };
+  });
+});
+
 const histogramBars = computed(() => {
-  if (!data.value) return [];
+  const payload = transformedSeries.value;
+  if (!payload) return [];
   return HISTOGRAM_SYMBOLS.map((symbol) => {
-    const series = data.value?.find((item) => item.symbol === symbol);
+    const series = payload.find((item) => item.symbol === symbol);
     if (!series || !series.points.length) return null;
     const lastPoint = series.points[series.points.length - 1];
     if (!lastPoint || typeof lastPoint.value !== 'number') return null;
@@ -114,9 +149,10 @@ const applyData = (
   map: Map<string, LineSeries>,
   hoverTarget: typeof hoverInfo,
   type: 'main' | 'fullscreen',
+  payload: { symbol: string; points: { time: string; value: number }[] }[] | null,
 ) => {
-  if (!chart || !data.value) return;
-  data.value.forEach((seriesData) => {
+  if (!chart || !payload) return;
+  payload.forEach((seriesData) => {
     if (!isAssetSymbol(seriesData.symbol)) return;
     const series = ensureSeries(chart, map, seriesData.symbol);
     series?.setData(seriesData.points.map((point) => ({ time: point.time, value: point.value })));
@@ -147,15 +183,16 @@ const syncVisibility = (map: Map<string, LineSeries>) => {
 };
 
 watch(
-  () => data.value,
-  () => {
+  () => transformedSeries.value,
+  (seriesPayload) => {
+    if (!seriesPayload) return;
     if (mainContainer.value && !mainChart) {
       mainChart = initChart(mainContainer.value);
       mainObserver = attachResize(mainChart, mainContainer.value, mainObserver);
     }
-    applyData(mainChart, seriesMap, hoverInfo, 'main');
+    applyData(mainChart, seriesMap, hoverInfo, 'main', seriesPayload);
     if (showFullscreen.value && fullscreenChart) {
-      applyData(fullscreenChart, fullscreenSeriesMap, fullscreenHoverInfo, 'fullscreen');
+      applyData(fullscreenChart, fullscreenSeriesMap, fullscreenHoverInfo, 'fullscreen', seriesPayload);
     }
   },
   { immediate: true },
@@ -172,7 +209,7 @@ const openFullscreen = async () => {
   if (fullscreenContainer.value) {
     fullscreenChart = initChart(fullscreenContainer.value);
     fullscreenObserver = attachResize(fullscreenChart, fullscreenContainer.value, fullscreenObserver);
-    applyData(fullscreenChart, fullscreenSeriesMap, fullscreenHoverInfo, 'fullscreen');
+    applyData(fullscreenChart, fullscreenSeriesMap, fullscreenHoverInfo, 'fullscreen', transformedSeries.value);
   }
 };
 
