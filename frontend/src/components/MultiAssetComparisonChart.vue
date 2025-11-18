@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import LegendToggle from './LegendToggle.vue';
 import FullscreenModal from './FullscreenModal.vue';
+import TwoAssetHistogram from './TwoAssetHistogram.vue';
 import { fetchRelativePerformance } from '../services/api';
 
 type LineSeries = ISeriesApi<'Line'>;
@@ -22,6 +23,7 @@ const COLORS: Record<AssetSymbol, string> = {
 const rangeKey = ref('1Y');
 const activeKeys = ref<string[]>([...SYMBOLS]);
 const showFullscreen = ref(false);
+const HISTOGRAM_SYMBOLS: AssetSymbol[] = ['SPY', 'GLD'];
 
 const { data, refetch } = useQuery({
   queryKey: computed(() => ['relative', 'multi', rangeKey.value]),
@@ -46,6 +48,16 @@ const fullscreenHoverInfo = ref<
   | { time: string; entries: { label: string; color: string; value?: number }[]; position: { x: number; y: number } }
   | null
 >(null);
+const histogramBars = computed(() => {
+  if (!data.value) return [];
+  return HISTOGRAM_SYMBOLS.map((symbol) => {
+    const series = data.value?.find((item) => item.symbol === symbol);
+    if (!series || !series.points.length) return null;
+    const lastPoint = series.points[series.points.length - 1];
+    if (!lastPoint || typeof lastPoint.value !== 'number') return null;
+    return { symbol, value: lastPoint.value };
+  }).filter((item): item is { symbol: string; value: number } => !!item);
+});
 let mainCrosshairHandler: ((param: MouseEventParams) => void) | null = null;
 let fullscreenCrosshairHandler: ((param: MouseEventParams) => void) | null = null;
 const extractValue = (point: unknown): number | undefined => {
@@ -250,19 +262,22 @@ const attachCrosshair = (
         </button>
       </div>
     </div>
-    <div class="relative flex-1 w-full min-h-[360px]">
-      <div ref="mainContainer" class="absolute inset-0"></div>
-      <div
-        v-if="hoverInfo"
-        class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50 max-w-[220px]"
-        :style="{ left: `calc(${hoverInfo.position.x}px + 12px)`, top: `calc(${hoverInfo.position.y}px - 40px)` }"
-      >
-        <div>{{ hoverInfo.time }}</div>
-        <div v-for="entry in hoverInfo.entries" :key="entry.label" class="flex justify-between gap-3">
-          <span :style="{ color: entry.color }">{{ entry.label }}</span>
-          <span>{{ entry.value?.toFixed(2) ?? '--' }}%</span>
+    <div class="grid gap-4 w-full xl:grid-cols-[3fr,1fr]">
+      <div class="relative flex-1 w-full min-h-[360px]">
+        <div ref="mainContainer" class="absolute inset-0"></div>
+        <div
+          v-if="hoverInfo"
+          class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50 max-w-[220px]"
+          :style="{ left: `calc(${hoverInfo.position.x}px + 12px)`, top: `calc(${hoverInfo.position.y}px - 40px)` }"
+        >
+          <div>{{ hoverInfo.time }}</div>
+          <div v-for="entry in hoverInfo.entries" :key="entry.label" class="flex justify-between gap-3">
+            <span :style="{ color: entry.color }">{{ entry.label }}</span>
+            <span>{{ entry.value?.toFixed(2) ?? '--' }}%</span>
+          </div>
         </div>
       </div>
+      <TwoAssetHistogram v-if="histogramBars.length" title="SPY vs GLD (YTD)" :bars="histogramBars" />
     </div>
     <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
     <FullscreenModal :open="showFullscreen" title="Multi-Asset Comparison" @close="showFullscreen = false">
