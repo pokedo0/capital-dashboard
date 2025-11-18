@@ -36,19 +36,18 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const downsampleWeekly = (points: { time: string; value: number }[]) => {
   if (!points.length) return points;
   const result: typeof points = [];
-  let lastTime: number | null = null;
+  let lastSampleTime: number | null = null;
   points.forEach((point) => {
     const current = new Date(point.time).getTime();
     if (Number.isNaN(current)) {
       result.push(point);
       return;
     }
-    if (lastTime === null || current - lastTime >= 7 * MS_PER_DAY) {
+    if (lastSampleTime === null || current - lastSampleTime >= 7 * MS_PER_DAY) {
       result.push(point);
-      lastTime = current;
+      lastSampleTime = current;
     } else {
       result[result.length - 1] = point;
-      lastTime = current;
     }
   });
   return result;
