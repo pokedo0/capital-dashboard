@@ -51,11 +51,11 @@ const renderChart = () => {
   }
   const payload = seriesData.value;
   const option = {
-    grid: { left: 50, right: 40, top: 30, bottom: 80, containLabel: true },
+    grid: { left: 50, right: 40, top: 30, bottom: 40, containLabel: true },
     xAxis: {
       type: 'category',
       data: payload.map((item) => item.symbol),
-      axisLabel: { color: '#f8fafc' },
+      axisLabel: { color: '#f8fafc', margin: 10 },
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.2)' } },
     },
     yAxis: {
@@ -76,10 +76,11 @@ const renderChart = () => {
           itemStyle: { color: item.change >= 0 ? '#22c55e' : '#ef4444' },
           label: {
             show: true,
-            position: item.change >= 0 ? 'top' : 'bottom',
+            position: item.change >= 0 ? 'top' : 'insideBottom',
             formatter: `${item.change.toFixed(2)}%`,
             color: '#f8fafc',
             fontSize: 11,
+            distance: 4,
           },
         })),
       },
@@ -110,13 +111,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4">
+  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 h-full">
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">Mag 7 Histogram Performance</div>
       </div>
       <TimeRangeSelector v-model="rangeKey" :options="rangeOptions" />
     </div>
-    <div ref="chartRef" class="w-full h-[360px]"></div>
+    <div ref="chartRef" class="w-full flex-1 min-h-[420px]"></div>
   </div>
 </template>
