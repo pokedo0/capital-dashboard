@@ -148,7 +148,11 @@ const createBundle = (element: HTMLDivElement): ChartBundle => {
   const size = measureSize(element);
   const chart = createChart(element, { ...chartOptions, height: size.height });
   chart.applyOptions({ width: size.width, height: size.height });
-  const sharedSeriesOptions = { priceLineVisible: false, lastValueVisible: true } as const;
+  const sharedSeriesOptions = {
+    priceLineVisible: true,
+    axisLabelVisible: true,
+    lastValueVisible: true,
+  } as const;
   const priceSeries = chart.addLineSeries({
     color: '#f78c1f',
     lineWidth: 2,
