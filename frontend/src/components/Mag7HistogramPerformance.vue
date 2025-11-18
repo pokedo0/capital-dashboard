@@ -51,7 +51,7 @@ const renderChart = () => {
   }
   const payload = seriesData.value;
   const option = {
-    grid: { left: 50, right: 20, top: 30, bottom: 40 },
+    grid: { left: 50, right: 40, top: 30, bottom: 60, containLabel: true },
     xAxis: {
       type: 'category',
       data: payload.map((item) => item.symbol),
