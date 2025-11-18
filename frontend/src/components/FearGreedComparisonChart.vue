@@ -186,8 +186,18 @@ const applyData = (
   store: 'main' | 'fullscreen',
 ) => {
   if (!chart || !fearSeries || !spySeries || !payload) return;
-  fearSeries.setData(payload.index.map((point) => ({ time: point.time, value: point.value })));
-  spySeries.setData(payload.spy.map((point) => ({ time: point.time, value: point.value })));
+  const normalize = (points: { time: string; value: number }[]) => {
+    const map = new Map<string, number>();
+    points.forEach((point) => {
+      if (!point.time || typeof point.value !== 'number') return;
+      map.set(point.time, point.value);
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
+      .map(([time, value]) => ({ time, value }));
+  };
+  fearSeries.setData(normalize(payload.index));
+  spySeries.setData(normalize(payload.spy));
   chart.timeScale().fitContent();
   chart.priceScale('left').applyOptions({ autoScale: true, mode: PriceScaleMode.Normal });
   chart.priceScale('right').applyOptions({ autoScale: true, mode: PriceScaleMode.Normal });
