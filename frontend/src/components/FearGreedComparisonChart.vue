@@ -96,10 +96,16 @@ const ensureSeries = (chart: IChartApi | null, type: 'fear' | 'spy'): LineSeries
   const shared = { priceLineVisible: false, lastValueVisible: true } as const;
   const options =
     type === 'fear'
-      ? { color: '#22c55e', lineWidth: 2, priceScaleId: 'left', ...shared }
-      : { color: '#60a5fa', lineWidth: 2, priceScaleId: 'right' as const, ...shared };
+      ? { color: '#ef4444', lineWidth: 2, priceScaleId: 'left', ...shared }
+      : { color: '#bdc3c7', lineWidth: 2, priceScaleId: 'right' as const, ...shared };
   return chart.addLineSeries(options);
 };
+
+const tooltipStyle = (position: { x: number; y: number }) => ({
+  left: `${position.x + 16}px`,
+  top: `${position.y}px`,
+  transform: 'translateY(-50%)',
+});
 
 const updateFearZones = (scope: 'main' | 'fullscreen') => {
   const isMain = scope === 'main';
@@ -404,25 +410,25 @@ const zoneBadges = [
       <div
         v-if="mainHover"
         class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50"
-        :style="{ left: `calc(${mainHover.position.x}px + 12px)`, top: `calc(${mainHover.position.y}px - 40px)` }"
+        :style="tooltipStyle(mainHover.position)"
       >
         <div>{{ mainHover.time }}</div>
         <div class="flex justify-between gap-2">
-          <span class="text-green-300">Fear & Greed</span>
+          <span class="text-red-300">Fear & Greed</span>
           <span>{{ mainHover.fear?.toFixed(1) ?? '--' }}</span>
         </div>
         <div class="flex justify-between gap-2">
-          <span class="text-blue-300">SPY</span>
+          <span class="text-slate-200">SPY</span>
           <span>{{ mainHover.spy?.toFixed(2) ?? '--' }}</span>
         </div>
       </div>
     </div>
     <div class="text-xs uppercase tracking-wide flex gap-6 text-textMuted">
       <span class="flex items-center gap-2">
-        <span class="w-4 h-1 bg-emerald-400 rounded-full"></span> Fear & Greed Index
+        <span class="w-4 h-1 bg-red-400 rounded-full"></span> Fear & Greed Index
       </span>
       <span class="flex items-center gap-2">
-        <span class="w-4 h-1 bg-blue-400 rounded-full"></span> SPY Close
+        <span class="w-4 h-1 bg-slate-300 rounded-full"></span> SPY Close
       </span>
     </div>
     <FullscreenModal
@@ -447,18 +453,15 @@ const zoneBadges = [
         <div
           v-if="fullscreenHover"
           class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50"
-          :style="{
-            left: `calc(${fullscreenHover.position.x}px + 12px)`,
-            top: `calc(${fullscreenHover.position.y}px - 40px)`,
-          }"
+          :style="tooltipStyle(fullscreenHover.position)"
         >
           <div>{{ fullscreenHover.time }}</div>
           <div class="flex justify-between gap-2">
-            <span class="text-green-300">Fear & Greed</span>
+            <span class="text-red-300">Fear & Greed</span>
             <span>{{ fullscreenHover.fear?.toFixed(1) ?? '--' }}</span>
           </div>
           <div class="flex justify-between gap-2">
-            <span class="text-blue-300">SPY</span>
+            <span class="text-slate-200">SPY</span>
             <span>{{ fullscreenHover.spy?.toFixed(2) ?? '--' }}</span>
           </div>
         </div>
