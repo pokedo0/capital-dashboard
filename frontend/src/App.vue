@@ -19,31 +19,33 @@ const { data: sp500Summary } = useQuery({
 </script>
 
 <template>
-  <div class="min-h-screen bg-background text-white px-4 md:px-10 py-8 space-y-10">
-    <section>
-      <MarketHeader title="Shepherd Capital Markets" subtitle="S&P500 Dashboard" :summary="sp500Summary" />
-    </section>
+  <div class="min-h-screen bg-background text-white py-8">
+    <div class="mx-auto w-full max-w-[1500px] px-4 md:px-10 space-y-10">
+      <section>
+        <MarketHeader title="Shepherd Capital Markets" subtitle="S&P500 Dashboard" :summary="sp500Summary" />
+      </section>
 
-    <section class="grid gap-6 xl:grid-cols-[2fr,1fr]">
-      <Sp500PriceVolumeChart />
-      <SectorTable />
-    </section>
+      <section class="grid gap-6 xl:grid-cols-[2fr,1fr]">
+        <Sp500PriceVolumeChart />
+        <SectorTable />
+      </section>
 
-    <section class="space-y-4">
-      <div class="text-2xl text-accentCyan font-semibold uppercase">NASDAQ 100 Dashboard</div>
-      <div class="grid gap-6 xl:grid-cols-2">
-        <Mag7RelativeChart />
-        <Mag7HistogramPerformance />
-      </div>
-    </section>
+      <section class="space-y-4">
+        <div class="text-2xl text-accentCyan font-semibold uppercase">NASDAQ 100 Dashboard</div>
+        <div class="grid gap-6 xl:grid-cols-2">
+          <Mag7RelativeChart />
+          <Mag7HistogramPerformance />
+        </div>
+      </section>
 
-    <section>
-      <MultiAssetComparisonChart />
-    </section>
+      <section>
+        <MultiAssetComparisonChart />
+      </section>
 
-    <section class="grid gap-6 xl:grid-cols-2">
-      <DrawdownChart />
-      <RelativeComparisonChart />
-    </section>
+      <section class="grid gap-6 xl:grid-cols-2">
+        <DrawdownChart />
+        <RelativeComparisonChart />
+      </section>
+    </div>
   </div>
 </template>

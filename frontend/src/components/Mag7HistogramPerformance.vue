@@ -114,7 +114,6 @@ onBeforeUnmount(() => {
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">Mag 7 Histogram Performance</div>
-        <p class="text-textMuted text-sm">Normalized relative returns sorted by range</p>
       </div>
       <TimeRangeSelector v-model="rangeKey" :options="rangeOptions" />
     </div>
