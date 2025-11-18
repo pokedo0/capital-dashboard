@@ -93,10 +93,11 @@ const initChart = (element: HTMLDivElement) => {
 
 const ensureSeries = (chart: IChartApi | null, type: 'fear' | 'spy'): LineSeries | null => {
   if (!chart) return null;
+  const shared = { priceLineVisible: false, lastValueVisible: true } as const;
   const options =
     type === 'fear'
-      ? { color: '#22c55e', lineWidth: 2, priceScaleId: 'left' }
-      : { color: '#60a5fa', lineWidth: 2, priceScaleId: 'right' as const };
+      ? { color: '#22c55e', lineWidth: 2, priceScaleId: 'left', ...shared }
+      : { color: '#60a5fa', lineWidth: 2, priceScaleId: 'right' as const, ...shared };
   return chart.addLineSeries(options);
 };
 
