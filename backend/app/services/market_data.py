@@ -224,7 +224,9 @@ def _latest_two_records(session: Session, symbol: str) -> List[PriceRecord]:
 
 
 def get_market_summary(session: Session, market: str) -> MarketSummary:
-    symbol = "SPY" if market.lower() == "sp500" else "QQQ"
+    market_key = market.lower()
+    symbol_map = {"sp500": "^GSPC", "nasdaq": "QQQ"}
+    symbol = symbol_map.get(market_key, "QQQ")
     ensure_history(session, symbol, resolve_range_start("1Y"), resolve_range_end())
     rows = _latest_two_records(session, symbol)
     if len(rows) < 2 or rows[0].close is None or rows[1].close is None:
