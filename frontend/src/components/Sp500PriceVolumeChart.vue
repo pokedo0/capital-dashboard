@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import {
+  CrosshairMode,
   type BusinessDay,
   type ChartOptions,
   createChart,
@@ -132,9 +133,20 @@ const chartOptions: DeepPartial<ChartOptions> = {
     horzLines: { color: 'rgba(255,255,255,0.08)' },
     vertLines: { color: 'rgba(255,255,255,0.05)' },
   },
-  rightPriceScale: { borderVisible: false },
-  leftPriceScale: { visible: true, borderVisible: false },
+  rightPriceScale: {
+    visible: true,
+    borderVisible: false,
+    axisLabelVisible: true,
+    alignLabels: true,
+  },
+  leftPriceScale: {
+    visible: true,
+    borderVisible: false,
+    axisLabelVisible: true,
+    alignLabels: true,
+  },
   timeScale: { borderVisible: false },
+  crosshair: { mode: CrosshairMode.Magnet },
 };
 
 const measureSize = (element: HTMLElement) => {
