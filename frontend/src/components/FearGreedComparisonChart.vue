@@ -36,6 +36,12 @@ const FEAR_ZONES = [
 
 const mainContainer = ref<HTMLDivElement | null>(null);
 const fullscreenContainer = ref<HTMLDivElement | null>(null);
+const mainOverlay = ref<HTMLDivElement | null>(null);
+const fullscreenOverlay = ref<HTMLDivElement | null>(null);
+const mainGreedZone = ref<HTMLDivElement | null>(null);
+const mainExtremeZone = ref<HTMLDivElement | null>(null);
+const fullscreenGreedZone = ref<HTMLDivElement | null>(null);
+const fullscreenExtremeZone = ref<HTMLDivElement | null>(null);
 let mainChart: IChartApi | null = null;
 let fullscreenChart: IChartApi | null = null;
 let mainObserver: ResizeObserver | null = null;
@@ -94,17 +100,60 @@ const ensureSeries = (chart: IChartApi | null, type: 'fear' | 'spy'): LineSeries
   return chart.addLineSeries(options);
 };
 
+const updateFearZones = (scope: 'main' | 'fullscreen') => {
+  const isMain = scope === 'main';
+  const series = isMain ? mainFearSeries : fullscreenFearSeries;
+  const overlay =
+    (isMain ? mainOverlay.value : fullscreenOverlay.value) ??
+    (isMain ? mainContainer.value : fullscreenContainer.value);
+  const greedEl = isMain ? mainGreedZone.value : fullscreenGreedZone.value;
+  const fearEl = isMain ? mainExtremeZone.value : fullscreenExtremeZone.value;
+  if (!series || !overlay) return;
+  const overlayHeight = overlay.clientHeight;
+  if (!overlayHeight) return;
+  const clamp = (value: number) => Math.min(Math.max(value, 0), overlayHeight);
+  const greedCoord = series.priceToCoordinate(75);
+  if (greedEl) {
+    if (typeof greedCoord !== 'number') {
+      greedEl.style.opacity = '0';
+    } else {
+      const height = clamp(greedCoord);
+      greedEl.style.opacity = '1';
+      greedEl.style.top = '0px';
+      greedEl.style.height = `${height}px`;
+    }
+  }
+  const fearCoord = series.priceToCoordinate(25);
+  if (fearEl) {
+    if (typeof fearCoord !== 'number') {
+      fearEl.style.opacity = '0';
+    } else {
+      const top = clamp(fearCoord);
+      fearEl.style.opacity = '1';
+      fearEl.style.top = `${top}px`;
+      fearEl.style.height = `${Math.max(overlayHeight - top, 0)}px`;
+    }
+  }
+};
+
+const scheduleZoneUpdate = (scope: 'main' | 'fullscreen') => {
+  requestAnimationFrame(() => updateFearZones(scope));
+};
+
 const attachResize = (
   chart: IChartApi | null,
   container: HTMLDivElement | null,
   existing: ResizeObserver | null,
+  scope: 'main' | 'fullscreen',
 ) => {
   existing?.disconnect();
   if (!chart || !container) return null;
   const observer = new ResizeObserver(() => {
     chart.applyOptions({ width: container.clientWidth, height: measureHeight(container) });
+    scheduleZoneUpdate(scope);
   });
   observer.observe(container);
+  scheduleZoneUpdate(scope);
   return observer;
 };
 
@@ -203,6 +252,7 @@ const applyData = (
   chart.priceScale('right').applyOptions({ autoScale: true, mode: PriceScaleMode.Normal });
   applyZoneLines(fearSeries, lines);
   attachCrosshair(chart, fearSeries, spySeries, hoverRef, store);
+  scheduleZoneUpdate(store);
 };
 
 watch(
@@ -215,7 +265,7 @@ watch(
         mainChart = initChart(mainContainer.value);
         mainFearSeries = ensureSeries(mainChart, 'fear');
         mainSpySeries = ensureSeries(mainChart, 'spy');
-        mainObserver = attachResize(mainChart, mainContainer.value, mainObserver);
+        mainObserver = attachResize(mainChart, mainContainer.value, mainObserver, 'main');
       }
     }
     applyData(mainChart, mainFearSeries, mainSpySeries, payload, mainHover, mainLines, 'main');
@@ -228,6 +278,7 @@ watch(
           fullscreenChart,
           fullscreenContainer.value,
           fullscreenObserver,
+          'fullscreen',
         );
       }
       applyData(
@@ -251,7 +302,12 @@ const openFullscreen = async () => {
     fullscreenChart = initChart(fullscreenContainer.value);
     fullscreenFearSeries = ensureSeries(fullscreenChart, 'fear');
     fullscreenSpySeries = ensureSeries(fullscreenChart, 'spy');
-    fullscreenObserver = attachResize(fullscreenChart, fullscreenContainer.value, fullscreenObserver);
+    fullscreenObserver = attachResize(
+      fullscreenChart,
+      fullscreenContainer.value,
+      fullscreenObserver,
+      'fullscreen',
+    );
     applyData(
       fullscreenChart,
       fullscreenFearSeries,
@@ -279,6 +335,14 @@ watch(showFullscreen, (visible) => {
     fullscreenFearSeries = null;
     fullscreenSpySeries = null;
   }
+});
+
+watch(mainOverlay, (el) => {
+  if (el) scheduleZoneUpdate('main');
+});
+
+watch(fullscreenOverlay, (el) => {
+  if (el) scheduleZoneUpdate('fullscreen');
 });
 
 onBeforeUnmount(() => {
@@ -324,6 +388,18 @@ const zoneBadges = [
     </div>
     <div class="relative flex-1 w-full min-h-[360px]">
       <div ref="mainContainer" class="absolute inset-0"></div>
+      <div ref="mainOverlay" class="pointer-events-none absolute inset-0 z-10">
+        <div
+          ref="mainGreedZone"
+          class="absolute inset-x-0 bg-emerald-400/10 transition-[height] duration-300 ease-out"
+          style="opacity: 0"
+        ></div>
+        <div
+          ref="mainExtremeZone"
+          class="absolute inset-x-0 bg-red-400/10 transition-[height] duration-300 ease-out"
+          style="opacity: 0"
+        ></div>
+      </div>
       <div
         v-if="mainHover"
         class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50"
@@ -355,6 +431,18 @@ const zoneBadges = [
     >
       <div class="relative flex-1 min-h-[440px]">
         <div ref="fullscreenContainer" class="absolute inset-0"></div>
+        <div ref="fullscreenOverlay" class="pointer-events-none absolute inset-0 z-10">
+          <div
+            ref="fullscreenGreedZone"
+            class="absolute inset-x-0 bg-emerald-400/10 transition-[height] duration-300 ease-out"
+            style="opacity: 0"
+          ></div>
+          <div
+            ref="fullscreenExtremeZone"
+            class="absolute inset-x-0 bg-red-400/10 transition-[height] duration-300 ease-out"
+            style="opacity: 0"
+          ></div>
+        </div>
         <div
           v-if="fullscreenHover"
           class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50"
