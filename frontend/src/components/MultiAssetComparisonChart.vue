@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { createChart, type IChartApi, type ISeriesApi, type MouseEventParams } from 'lightweight-charts';
+import {
+  createChart,
+  PriceScaleMode,
+  type IChartApi,
+  type ISeriesApi,
+  type MouseEventParams,
+} from 'lightweight-charts';
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import LegendToggle from './LegendToggle.vue';
@@ -157,6 +163,7 @@ const applyData = (
     series?.setData(seriesData.points.map((point) => ({ time: point.time, value: point.value })));
   });
   chart.timeScale().fitContent();
+  chart.priceScale('right').setMode({ autoScale: true, mode: PriceScaleMode.Normal });
   syncVisibility(map);
   attachCrosshair(chart, map, hoverTarget, type);
 };
