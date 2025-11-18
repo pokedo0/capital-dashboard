@@ -137,13 +137,11 @@ const chartOptions: DeepPartial<ChartOptions> = {
   rightPriceScale: {
     visible: true,
     borderVisible: false,
-    axisLabelVisible: true,
     alignLabels: true,
   },
   leftPriceScale: {
     visible: true,
     borderVisible: false,
-    axisLabelVisible: true,
     alignLabels: true,
   },
   timeScale: { borderVisible: false },
@@ -187,7 +185,6 @@ const createBundle = (element: HTMLDivElement): ChartBundle => {
   });
   volumeSeries.priceScale().applyOptions({
     scaleMargins: { top: 0.75, bottom: 0 },
-    title: 'Volume (M)',
     entireTextOnly: true,
   });
   const observer = new ResizeObserver(() => {

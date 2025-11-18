@@ -96,8 +96,8 @@ const ensureSeries = (chart: IChartApi | null, type: 'fear' | 'spy'): LineSeries
   const shared = { priceLineVisible: false, lastValueVisible: true } as const;
   const options =
     type === 'fear'
-      ? { color: '#ef4444', lineWidth: 2, priceScaleId: 'left', ...shared }
-      : { color: '#bdc3c7', lineWidth: 2, priceScaleId: 'right' as const, ...shared };
+      ? { color: '#ef4444', lineWidth: 2 as const, priceScaleId: 'left' as const, ...shared }
+      : { color: '#bdc3c7', lineWidth: 2 as const, priceScaleId: 'right' as const, ...shared };
   return chart.addLineSeries(options);
 };
 
@@ -218,7 +218,7 @@ const attachCrosshair = (
     const time =
       typeof param.time === 'string'
         ? param.time
-        : new Date((param.time as number) * 1000).toISOString().split('T')[0];
+        : (new Date((param.time as number) * 1000).toISOString().split('T')[0] ?? '');
     hoverRef.value = {
       time,
       fear: extractValue(fearPoint),
