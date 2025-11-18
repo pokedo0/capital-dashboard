@@ -5,7 +5,7 @@ import json
 import logging
 from typing import Dict, List, Sequence
 from urllib.error import URLError
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 
 from sqlalchemy import func
 from sqlmodel import Session, select
@@ -234,8 +234,18 @@ def _latest_two_records(session: Session, symbol: str) -> List[PriceRecord]:
 
 
 def _fetch_fear_greed_history() -> List[ValuePoint]:
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+        ),
+        "Accept": "application/json",
+        "Referer": "https://edition.cnn.com/markets/fear-and-greed",
+        "Origin": "https://edition.cnn.com",
+    }
     try:
-        with urlopen(FEAR_GREED_URL, timeout=10) as response:
+        request = Request(FEAR_GREED_URL, headers=headers)
+        with urlopen(request, timeout=10) as response:
             payload = json.load(response)
     except URLError as exc:  # pragma: no cover - network error handling
         logger.error("Failed to fetch Fear & Greed Index data: %s", exc)
@@ -243,7 +253,8 @@ def _fetch_fear_greed_history() -> List[ValuePoint]:
     except Exception as exc:  # pragma: no cover - unexpected issues
         logger.error("Unexpected error fetching Fear & Greed Index data: %s", exc)
         raise ValueError("Unable to fetch Fear & Greed Index data") from exc
-    historical = payload.get("fear_and_greed_historical", [])
+    historical_block = payload.get("fear_and_greed_historical", {})
+    historical = historical_block.get("data", []) if isinstance(historical_block, dict) else historical_block
     points: List[ValuePoint] = []
     for item in historical:
         timestamp = item.get("x")
