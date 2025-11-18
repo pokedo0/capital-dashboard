@@ -8,8 +8,9 @@ export interface HistogramBar {
 }
 
 const props = defineProps<{
-  title: string;
+  title?: string;
   bars: HistogramBar[];
+  bare?: boolean;
 }>();
 
 const chartRef = ref<HTMLDivElement | null>(null);
@@ -89,8 +90,14 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4">
-    <div class="text-lg text-accentCyan font-semibold uppercase">
+  <div
+    :class="
+      bare
+        ? 'flex flex-col gap-4 h-full'
+        : 'bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4'
+    "
+  >
+    <div v-if="!bare && title" class="text-lg text-accentCyan font-semibold uppercase">
       {{ title }}
     </div>
     <div ref="chartRef" class="w-full flex-1 min-h-[320px]"></div>

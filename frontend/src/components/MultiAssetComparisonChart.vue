@@ -23,7 +23,13 @@ const COLORS: Record<AssetSymbol, string> = {
 const rangeKey = ref('1Y');
 const activeKeys = ref<string[]>([...SYMBOLS]);
 const showFullscreen = ref(false);
-const HISTOGRAM_SYMBOLS: AssetSymbol[] = ['SPY', 'GLD'];
+const HISTOGRAM_SYMBOLS: AssetSymbol[] = ['SPY', 'GLD', 'QQQ', 'BTC-USD'];
+const HISTOGRAM_LABELS: Record<AssetSymbol, string> = {
+  SPY: 'SPY',
+  GLD: 'GLD',
+  QQQ: 'QQQ',
+  'BTC-USD': 'Bitcoin',
+};
 
 const { data, refetch } = useQuery({
   queryKey: computed(() => ['relative', 'multi', rangeKey.value]),
@@ -55,7 +61,7 @@ const histogramBars = computed(() => {
     if (!series || !series.points.length) return null;
     const lastPoint = series.points[series.points.length - 1];
     if (!lastPoint || typeof lastPoint.value !== 'number') return null;
-    return { symbol, value: lastPoint.value };
+    return { symbol: HISTOGRAM_LABELS[symbol] ?? symbol, value: lastPoint.value };
   }).filter((item): item is { symbol: string; value: number } => !!item);
 });
 let mainCrosshairHandler: ((param: MouseEventParams) => void) | null = null;
@@ -277,7 +283,7 @@ const attachCrosshair = (
           </div>
         </div>
       </div>
-      <TwoAssetHistogram v-if="histogramBars.length" title="SPY vs GLD (YTD)" :bars="histogramBars" />
+      <TwoAssetHistogram v-if="histogramBars.length" :bars="histogramBars" bare />
     </div>
     <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
     <FullscreenModal :open="showFullscreen" title="Multi-Asset Comparison" @close="showFullscreen = false">
