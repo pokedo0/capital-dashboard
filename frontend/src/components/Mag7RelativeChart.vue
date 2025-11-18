@@ -265,7 +265,7 @@ const attachCrosshair = (
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">Mag 7 Line Performance</div>      </div>
       <div class="flex items-center gap-3">
-        <TimeRangeSelector v-model="rangeKey" :options="['1W', '1M', '3M', '6M']" />
+        <TimeRangeSelector v-model="rangeKey" :options="['1W', '1M', '3M', 'YTD', '1Y']" />
         <button class="px-3 py-1 border border-white/20 rounded text-textMuted hover:text-white" @click="openFullscreen">
           Fullscreen
         </button>
