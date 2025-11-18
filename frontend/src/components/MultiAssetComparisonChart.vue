@@ -258,11 +258,10 @@ const attachCrosshair = (
   <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4">
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
-        <div class="text-xl text-white font-semibold uppercase">SPY vs GLD (YTD)</div>
-        <p class="text-textMuted text-sm">Compare ETF and Bitcoin relative returns</p>
+        <div class="text-xl text-white font-semibold uppercase">SPY vs GLD</div>
       </div>
       <div class="flex items-center gap-3">
-        <TimeRangeSelector v-model="rangeKey" :options="['3M', '6M', '1Y']" />
+        <TimeRangeSelector v-model="rangeKey" :options="['1W', '1M', '3M', 'YTD', '1Y', '5Y']" />
         <button class="px-3 py-1 border border-white/20 rounded text-textMuted hover:text-white" @click="openFullscreen">
           Fullscreen
         </button>
