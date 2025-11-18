@@ -103,6 +103,25 @@ const valueWithFallback = (point: unknown, map: Map<string, number>, key: string
   return map.get(key);
 };
 
+const tooltipStyle = (
+  position: { x: number; y: number },
+  container: HTMLElement | null,
+  width = 240,
+) => {
+  const padding = 12;
+  const offsetX = 16;
+  const offsetY = 12;
+  const containerWidth = container?.clientWidth ?? 0;
+  const containerHeight = container?.clientHeight ?? 0;
+  const baseLeft = position.x + offsetX;
+  const maxLeft = containerWidth ? containerWidth - width - padding : baseLeft;
+  const left = `${Math.max(Math.min(baseLeft, maxLeft), padding)}px`;
+  const baseTop = position.y + offsetY;
+  const maxTop = containerHeight ? containerHeight - padding : baseTop;
+  const top = `${Math.max(Math.min(baseTop, maxTop), padding)}px`;
+  return { left, top };
+};
+
 const chartOptions: DeepPartial<ChartOptions> = {
   layout: {
     background: { color: '#050505' },
@@ -129,8 +148,17 @@ const createBundle = (element: HTMLDivElement): ChartBundle => {
   const size = measureSize(element);
   const chart = createChart(element, { ...chartOptions, height: size.height });
   chart.applyOptions({ width: size.width, height: size.height });
-  const priceSeries = chart.addLineSeries({ color: '#f78c1f', lineWidth: 2 });
-  const averageSeries = chart.addLineSeries({ color: '#ef4444', lineWidth: 2 });
+  const sharedSeriesOptions = { priceLineVisible: false, lastValueVisible: true } as const;
+  const priceSeries = chart.addLineSeries({
+    color: '#f78c1f',
+    lineWidth: 2,
+    ...sharedSeriesOptions,
+  });
+  const averageSeries = chart.addLineSeries({
+    color: '#ef4444',
+    lineWidth: 2,
+    ...sharedSeriesOptions,
+  });
   const volumeSeries = chart.addHistogramSeries({
     priceScaleId: 'left',
     color: '#2563eb',
@@ -354,7 +382,7 @@ const attachCrosshair = (
       <div
         v-if="hoverInfo"
         class="absolute bg-black/85 border border-white/20 rounded px-4 py-3 text-xs text-white pointer-events-none z-50 max-w-[240px] shadow-lg space-y-2"
-        :style="{ left: '16px', top: '16px' }"
+        :style="tooltipStyle(hoverInfo.position, mainContainer, 240)"
       >
         <div class="text-sm font-semibold">{{ hoverInfo.time }}</div>
         <div class="flex items-center justify-between gap-3">
@@ -379,7 +407,7 @@ const attachCrosshair = (
           <div
             v-if="fullscreenHoverInfo"
             class="absolute bg-black/85 border border-white/20 rounded px-4 py-3 text-xs text-white pointer-events-none z-50 max-w-[260px] shadow-lg space-y-2"
-            :style="{ left: '20px', top: '20px' }"
+            :style="tooltipStyle(fullscreenHoverInfo.position, fullscreenContainer, 260)"
           >
             <div class="text-sm font-semibold">{{ fullscreenHoverInfo.time }}</div>
             <div class="flex items-center justify-between gap-3">
