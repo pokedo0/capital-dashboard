@@ -95,19 +95,14 @@ const transformedSeries = computed(() => {
 
 const histogramBars = computed(() => {
   const payload = transformedSeries.value;
+  if (!payload) return [];
   return HISTOGRAM_SYMBOLS.map((symbol) => {
-    const label = HISTOGRAM_LABELS[symbol] ?? symbol;
-    if (!payload) {
-      return { symbol: label, value: 0 };
-    }
     const series = payload.find((item) => item.symbol === symbol);
-    if (!series || !series.points.length) {
-      return { symbol: label, value: 0 };
-    }
+    if (!series || !series.points.length) return null;
     const lastPoint = series.points[series.points.length - 1];
-    const value = typeof lastPoint?.value === 'number' ? lastPoint.value : 0;
-    return { symbol: label, value };
-  });
+    if (typeof lastPoint?.value !== 'number') return null;
+    return { symbol: HISTOGRAM_LABELS[symbol] ?? symbol, value: lastPoint.value };
+  }).filter((item): item is { symbol: string; value: number } => !!item);
 });
 let mainCrosshairHandler: ((param: MouseEventParams) => void) | null = null;
 let fullscreenCrosshairHandler: ((param: MouseEventParams) => void) | null = null;
@@ -330,7 +325,12 @@ const attachCrosshair = (
           </div>
         </div>
       </div>
-      <TwoAssetHistogram :bars="histogramBars" bare />
+      <div class="min-h-[320px]">
+        <TwoAssetHistogram v-if="histogramBars.length" :bars="histogramBars" bare />
+        <div v-else class="bg-panel/30 border border-dashed border-white/20 rounded-xl h-full flex items-center justify-center text-textMuted text-sm">
+          Loading histogram...
+        </div>
+      </div>
     </div>
     <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
     <FullscreenModal :open="showFullscreen" title="Multi-Asset Comparison" @close="showFullscreen = false">
