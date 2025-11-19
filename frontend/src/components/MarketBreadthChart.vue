@@ -38,9 +38,10 @@ watch([rangeKey, selectedSymbol], () => refetch());
 const container = ref<HTMLDivElement | null>(null);
 let chart: IChartApi | null = null;
 let priceSeries: LineSeries | null = null;
+let breadthSeries: LineSeries | null = null;
+let breadthSymbol: string | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let crosshairHandler: ((param: MouseEventParams) => void) | null = null;
-const seriesMap = new Map<string, LineSeries>();
 
 type TooltipEntry = { label: string; color: string; value?: number; unit: 'percent' | 'index' };
 
@@ -73,17 +74,22 @@ const initChart = (el: HTMLDivElement): IChartApi =>
     timeScale: { borderVisible: false, timeVisible: true },
   });
 
-const ensureSeries = (symbol: string): LineSeries | null => {
+const ensureBreadthSeries = () => {
   if (!chart) return null;
-  if (seriesMap.has(symbol)) return seriesMap.get(symbol)!;
-  const series = chart.addLineSeries({
-    color: COLOR_MAP[symbol] ?? '#ffffff',
-    lineWidth: symbol === '^NDX' ? 2 : 2,
-    lineStyle: symbol === '^NDX' ? 1 : 0,
-    priceScaleId: 'left',
-  });
-  seriesMap.set(symbol, series);
-  return series;
+  if (!breadthSeries || breadthSymbol !== selectedSymbol.value) {
+    if (breadthSeries) {
+      chart.removeSeries(breadthSeries);
+    }
+    breadthSeries = chart.addLineSeries({
+      color: COLOR_MAP[selectedSymbol.value] ?? '#ffffff',
+      lineWidth: 2,
+      priceScaleId: 'left',
+    });
+    breadthSymbol = selectedSymbol.value;
+  } else {
+    breadthSeries.applyOptions({ color: COLOR_MAP[selectedSymbol.value] ?? '#ffffff' });
+  }
+  return breadthSeries;
 };
 
 const ensurePriceSeries = () => {
@@ -97,30 +103,13 @@ const ensurePriceSeries = () => {
   return priceSeries;
 };
 
-const cleanupSeries = (allowedSymbols: string[]) => {
-  const currentChart = chart;
-  if (!currentChart) return;
-  seriesMap.forEach((series, symbol) => {
-    if (!allowedSymbols.includes(symbol)) {
-      currentChart.removeSeries(series);
-      seriesMap.delete(symbol);
-    }
-  });
-};
-
 const applyData = () => {
   if (!chart || !data.value) return;
-  const activeSymbols = ['^NDX', ...data.value.series.map((s) => s.symbol)];
-  cleanupSeries(activeSymbols);
-
-  const benchmarkSeries = ensureSeries('^NDX');
-  benchmarkSeries?.setData(
-    data.value.benchmark_percent.points.map((point) => ({ time: point.time, value: point.value })),
+  const breadth = data.value.series[0];
+  const breadthLine = ensureBreadthSeries();
+  breadthLine?.setData(
+    (breadth?.points ?? []).map((point) => ({ time: point.time, value: point.value })),
   );
-  data.value.series.forEach((seriesData) => {
-    const series = ensureSeries(seriesData.symbol);
-    series?.setData(seriesData.points.map((point) => ({ time: point.time, value: point.value })));
-  });
 
   const ndxPriceSeries = ensurePriceSeries();
   ndxPriceSeries?.setData(
@@ -163,19 +152,20 @@ const attachCrosshair = () => {
       typeof param.time === 'string'
         ? param.time
         : new Date((param.time as number) * 1000).toISOString().split('T')[0] || '';
-    const entries: TooltipEntry[] = Array.from(seriesMap.entries()).map(([symbol, series]) => {
-      const value = param.seriesData.get(series);
-      return {
-        label: symbol === '^NDX' ? 'NDX' : symbol.replace('$', ''),
-        color: COLOR_MAP[symbol] ?? '#ffffff',
-        value: extractValue(value),
+    const entries: TooltipEntry[] = [];
+    if (breadthSeries) {
+      const breadthValue = param.seriesData.get(breadthSeries);
+      entries.push({
+        label: selectedOption.value.label,
+        color: COLOR_MAP[selectedSymbol.value] ?? '#ffffff',
+        value: extractValue(breadthValue),
         unit: 'percent',
-      };
-    });
+      });
+    }
     if (priceSeries) {
       const priceValue = param.seriesData.get(priceSeries);
       entries.push({
-        label: 'NDX Price',
+        label: 'NDX Index',
         color: PRICE_COLOR,
         value: extractValue(priceValue),
         unit: 'index',
@@ -211,7 +201,8 @@ onBeforeUnmount(() => {
   }
   chart?.remove();
   resizeObserver?.disconnect();
-  seriesMap.clear();
+  breadthSeries = null;
+  breadthSymbol = null;
   priceSeries = null;
 });
 </script>
