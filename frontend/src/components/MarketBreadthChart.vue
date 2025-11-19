@@ -20,6 +20,7 @@ const COLOR_MAP: Record<string, string> = {
   '$NDFI': '#facc15',
   '$NDTH': '#fb7185',
 };
+const PRICE_COLOR = '#7dd3fc';
 
 const rangeKey = ref('1M');
 const selectedSymbol = ref<BreadthSymbol>(BREADTH_OPTIONS[0].value);
@@ -33,14 +34,17 @@ watch([rangeKey, selectedSymbol], () => refetch());
 
 const container = ref<HTMLDivElement | null>(null);
 let chart: IChartApi | null = null;
+let priceSeries: LineSeries | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let crosshairHandler: ((param: MouseEventParams) => void) | null = null;
 const seriesMap = new Map<string, LineSeries>();
 
+type TooltipEntry = { label: string; color: string; value?: number; unit: 'percent' | 'index' };
+
 const hoverInfo = ref<
   | {
       time: string;
-      entries: { label: string; color: string; value?: number }[];
+      entries: TooltipEntry[];
       position: { x: number; y: number };
     }
   | null
@@ -61,7 +65,8 @@ const initChart = (el: HTMLDivElement): IChartApi =>
       vertLines: { color: 'rgba(255,255,255,0.05)' },
     },
     crosshair: { mode: 1 },
-    rightPriceScale: { borderVisible: false },
+    leftPriceScale: { visible: true, borderVisible: false },
+    rightPriceScale: { visible: true, borderVisible: false },
     timeScale: { borderVisible: false, timeVisible: true },
   });
 
@@ -72,9 +77,21 @@ const ensureSeries = (symbol: string): LineSeries | null => {
     color: COLOR_MAP[symbol] ?? '#ffffff',
     lineWidth: symbol === '^NDX' ? 2 : 2,
     lineStyle: symbol === '^NDX' ? 1 : 0,
+    priceScaleId: 'left',
   });
   seriesMap.set(symbol, series);
   return series;
+};
+
+const ensurePriceSeries = () => {
+  if (!chart) return null;
+  if (priceSeries) return priceSeries;
+  priceSeries = chart.addLineSeries({
+    color: PRICE_COLOR,
+    lineWidth: 2,
+    priceScaleId: 'right',
+  });
+  return priceSeries;
 };
 
 const cleanupSeries = (allowedSymbols: string[]) => {
@@ -95,12 +112,19 @@ const applyData = () => {
 
   const benchmarkSeries = ensureSeries('^NDX');
   benchmarkSeries?.setData(
-    data.value.benchmark.points.map((point) => ({ time: point.time, value: point.value })),
+    data.value.benchmark_percent.points.map((point) => ({ time: point.time, value: point.value })),
   );
   data.value.series.forEach((seriesData) => {
     const series = ensureSeries(seriesData.symbol);
     series?.setData(seriesData.points.map((point) => ({ time: point.time, value: point.value })));
   });
+
+  const ndxPriceSeries = ensurePriceSeries();
+  ndxPriceSeries?.setData(
+    data.value.benchmark_price.map((point) => ({ time: point.time, value: point.value })),
+  );
+  chart.priceScale('left').applyOptions({ autoScale: true, borderVisible: false });
+  chart.priceScale('right').applyOptions({ autoScale: true, borderVisible: false });
 
   chart.timeScale().fitContent();
   attachCrosshair();
@@ -136,14 +160,24 @@ const attachCrosshair = () => {
       typeof param.time === 'string'
         ? param.time
         : new Date((param.time as number) * 1000).toISOString().split('T')[0] || '';
-    const entries = Array.from(seriesMap.entries()).map(([symbol, series]) => {
+    const entries: TooltipEntry[] = Array.from(seriesMap.entries()).map(([symbol, series]) => {
       const value = param.seriesData.get(series);
       return {
         label: symbol === '^NDX' ? 'NDX' : symbol.replace('$', ''),
         color: COLOR_MAP[symbol] ?? '#ffffff',
         value: extractValue(value),
+        unit: 'percent',
       };
     });
+    if (priceSeries) {
+      const priceValue = param.seriesData.get(priceSeries);
+      entries.push({
+        label: 'NDX Price',
+        color: PRICE_COLOR,
+        value: extractValue(priceValue),
+        unit: 'index',
+      });
+    }
     hoverInfo.value = {
       time,
       entries,
@@ -175,6 +209,7 @@ onBeforeUnmount(() => {
   chart?.remove();
   resizeObserver?.disconnect();
   seriesMap.clear();
+  priceSeries = null;
 });
 </script>
 
@@ -188,7 +223,7 @@ onBeforeUnmount(() => {
         <div class="flex items-center gap-3 text-xs text-textMuted mt-1">
           <span class="flex items-center gap-2">
             <span class="w-4 h-1 rounded-full" :style="{ backgroundColor: COLOR_MAP['^NDX'] }"></span>
-            <span>NDX (Benchmark)</span>
+            <span>NDX % Change (Left Axis)</span>
           </span>
           <span class="flex items-center gap-2">
             <span
@@ -196,6 +231,10 @@ onBeforeUnmount(() => {
               :style="{ backgroundColor: COLOR_MAP[selectedSymbol] }"
             ></span>
             <span>{{ selectedSymbol.replace('$', '') }} (Breadth)</span>
+          </span>
+          <span class="flex items-center gap-2">
+            <span class="w-4 h-1 rounded-full" :style="{ backgroundColor: PRICE_COLOR }"></span>
+            <span>NDX Price (Right Axis)</span>
           </span>
         </div>
       </div>
@@ -224,7 +263,14 @@ onBeforeUnmount(() => {
         <div>{{ hoverInfo.time }}</div>
         <div v-for="entry in hoverInfo.entries" :key="entry.label" class="flex justify-between gap-3">
           <span :style="{ color: entry.color }">{{ entry.label }}</span>
-          <span>{{ entry.value?.toFixed(2) ?? '--' }}%</span>
+          <span>
+            <template v-if="entry.unit === 'percent'">
+              {{ entry.value?.toFixed(2) ?? '--' }}%
+            </template>
+            <template v-else>
+              {{ entry.value?.toFixed(2) ?? '--' }}
+            </template>
+          </span>
         </div>
       </div>
     </div>

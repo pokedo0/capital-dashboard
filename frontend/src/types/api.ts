@@ -23,7 +23,8 @@ export interface RelativeSeries {
 }
 
 export interface MarketBreadthResponse {
-  benchmark: RelativeSeries;
+  benchmark_percent: RelativeSeries;
+  benchmark_price: ValuePoint[];
   series: RelativeSeries[];
 }
 

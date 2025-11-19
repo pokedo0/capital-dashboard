@@ -71,5 +71,6 @@ class FearGreedResponse(BaseModel):
 
 
 class MarketBreadthResponse(BaseModel):
-    benchmark: RelativeSeries
+    benchmark_percent: RelativeSeries
+    benchmark_price: List[ValuePoint]
     series: List[RelativeSeries]

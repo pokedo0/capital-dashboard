@@ -51,7 +51,7 @@ def _to_relative_points(series: List[Tuple[date, float]]) -> List[ValuePoint]:
     return points
 
 
-def _load_benchmark(session: Session, start_date: date, end_date: date) -> List[ValuePoint]:
+def _load_benchmark(session: Session, start_date: date, end_date: date) -> Tuple[List[ValuePoint], List[ValuePoint]]:
     ensure_history(session, "^NDX", start_date, end_date)
     records = (
         session.exec(
@@ -64,11 +64,13 @@ def _load_benchmark(session: Session, start_date: date, end_date: date) -> List[
         .all()
     )
     pairs: List[Tuple[date, float]] = []
+    price_points: List[ValuePoint] = []
     for record in records:
         if record.close is None:
             continue
         pairs.append((record.trade_date, record.close))
-    return _to_relative_points(pairs)
+        price_points.append(ValuePoint(time=record.trade_date, value=record.close))
+    return _to_relative_points(pairs), price_points
 
 
 def _estimate_records(start_date: date, end_date: date) -> int:
@@ -97,7 +99,7 @@ def get_market_breadth_series(
         raise ValueError("至少选择一个市场宽度指标")
     start = resolve_range_start(range_key)
     end = resolve_range_end()
-    benchmark_points = _load_benchmark(session, start, end)
+    benchmark_percent, benchmark_price = _load_benchmark(session, start, end)
     series_payload: List[RelativeSeries] = []
     errors: Dict[str, str] = {}
     for symbol in breadth_symbols:
@@ -114,6 +116,7 @@ def get_market_breadth_series(
         detail = "; ".join(errors.values()) if errors else "无可用数据"
         raise ValueError(f"无法获取 Market Breadth 数据: {detail}")
     return MarketBreadthResponse(
-        benchmark=RelativeSeries(symbol="^NDX", points=benchmark_points),
+        benchmark_percent=RelativeSeries(symbol="^NDX", points=benchmark_percent),
+        benchmark_price=benchmark_price,
         series=series_payload,
     )
