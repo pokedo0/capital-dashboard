@@ -90,10 +90,10 @@ class Api:
     def _build_params(
         self,
         symbol: str,
-        start_date: date | str | None,
-        end_date: date | str | None,
-        order: str,
-        max_records: int | None,
+        start_date: date | str | None = None,
+        end_date: date | str | None = None,
+        order: str = "asc",
+        max_records: int | None = None,
     ) -> Dict[str, Any]:
         params: Dict[str, Any] = {
             "symbol": symbol,
