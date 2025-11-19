@@ -3,12 +3,17 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { createChart, type IChartApi, type ISeriesApi, type MouseEventParams } from 'lightweight-charts';
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
-import LegendToggle from './LegendToggle.vue';
 import { fetchMarketBreadth } from '../services/api';
 
 type LineSeries = ISeriesApi<'Line'>;
 
-const BREADTH_SYMBOLS = ['$NDTW', '$NDFI', '$NDTH'] as const;
+const BREADTH_OPTIONS = [
+  { value: '$NDTW', label: 'NDTW - Stocks Above 20D Avg' },
+  { value: '$NDFI', label: 'NDFI - Fast Breadth Oscillator' },
+  { value: '$NDTH', label: 'NDTH - Momentum Breadth' },
+] as const;
+type BreadthSymbol = (typeof BREADTH_OPTIONS)[number]['value'];
+
 const COLOR_MAP: Record<string, string> = {
   '^NDX': '#f5f5f5',
   '$NDTW': '#38bdf8',
@@ -17,14 +22,14 @@ const COLOR_MAP: Record<string, string> = {
 };
 
 const rangeKey = ref('1M');
-const activeSymbols = ref<string[]>(['$NDTW']);
+const selectedSymbol = ref<BreadthSymbol>(BREADTH_OPTIONS[0].value);
 
 const { data, refetch } = useQuery({
-  queryKey: computed(() => ['market-breadth', rangeKey.value]),
-  queryFn: () => fetchMarketBreadth([...BREADTH_SYMBOLS], rangeKey.value),
+  queryKey: computed(() => ['market-breadth', rangeKey.value, selectedSymbol.value]),
+  queryFn: () => fetchMarketBreadth([selectedSymbol.value], rangeKey.value),
 });
 
-watch(rangeKey, () => refetch());
+watch([rangeKey, selectedSymbol], () => refetch());
 
 const container = ref<HTMLDivElement | null>(null);
 let chart: IChartApi | null = null;
@@ -40,12 +45,6 @@ const hoverInfo = ref<
     }
   | null
 >(null);
-
-const legendItems = BREADTH_SYMBOLS.map((symbol) => ({
-  key: symbol,
-  label: symbol.replace('$', ''),
-  color: COLOR_MAP[symbol] ?? '#ffffff',
-}));
 
 const measureHeight = (el: HTMLElement): number => el.getBoundingClientRect().height || 360;
 
@@ -78,19 +77,22 @@ const ensureSeries = (symbol: string): LineSeries | null => {
   return series;
 };
 
-const applyVisibility = () => {
-  const active = new Set(activeSymbols.value);
+const cleanupSeries = (allowedSymbols: string[]) => {
+  const currentChart = chart;
+  if (!currentChart) return;
   seriesMap.forEach((series, symbol) => {
-    if (symbol === '^NDX') {
-      series.applyOptions({ visible: true });
-      return;
+    if (!allowedSymbols.includes(symbol)) {
+      currentChart.removeSeries(series);
+      seriesMap.delete(symbol);
     }
-    series.applyOptions({ visible: active.has(symbol) });
   });
 };
 
 const applyData = () => {
   if (!chart || !data.value) return;
+  const activeSymbols = ['^NDX', ...data.value.series.map((s) => s.symbol)];
+  cleanupSeries(activeSymbols);
+
   const benchmarkSeries = ensureSeries('^NDX');
   benchmarkSeries?.setData(
     data.value.benchmark.points.map((point) => ({ time: point.time, value: point.value })),
@@ -99,7 +101,7 @@ const applyData = () => {
     const series = ensureSeries(seriesData.symbol);
     series?.setData(seriesData.points.map((point) => ({ time: point.time, value: point.value })));
   });
-  applyVisibility();
+
   chart.timeScale().fitContent();
   attachCrosshair();
 };
@@ -107,8 +109,7 @@ const applyData = () => {
 const attachResizeObserver = (el: HTMLDivElement) => {
   resizeObserver?.disconnect();
   resizeObserver = new ResizeObserver(() => {
-    if (!chart) return;
-    chart.applyOptions({ width: el.clientWidth, height: measureHeight(el) });
+    chart?.applyOptions({ width: el.clientWidth, height: measureHeight(el) });
   });
   resizeObserver.observe(el);
 };
@@ -135,16 +136,14 @@ const attachCrosshair = () => {
       typeof param.time === 'string'
         ? param.time
         : new Date((param.time as number) * 1000).toISOString().split('T')[0] || '';
-    const entries = Array.from(seriesMap.entries())
-      .filter(([symbol]) => symbol === '^NDX' || activeSymbols.value.includes(symbol))
-      .map(([symbol, series]) => {
-        const value = param.seriesData.get(series);
-        return {
-          label: symbol === '^NDX' ? 'NDX' : symbol.replace('$', ''),
-          color: COLOR_MAP[symbol] ?? '#ffffff',
-          value: extractValue(value),
-        };
-      });
+    const entries = Array.from(seriesMap.entries()).map(([symbol, series]) => {
+      const value = param.seriesData.get(series);
+      return {
+        label: symbol === '^NDX' ? 'NDX' : symbol.replace('$', ''),
+        color: COLOR_MAP[symbol] ?? '#ffffff',
+        value: extractValue(value),
+      };
+    });
     hoverInfo.value = {
       time,
       entries,
@@ -169,10 +168,6 @@ watch(
   { immediate: true },
 );
 
-watch(activeSymbols, () => {
-  applyVisibility();
-});
-
 onBeforeUnmount(() => {
   if (chart && crosshairHandler) {
     chart.unsubscribeCrosshairMove(crosshairHandler);
@@ -190,12 +185,34 @@ onBeforeUnmount(() => {
         <div class="text-xl text-accentCyan font-semibold uppercase">
           Nasdaq 100 Stocks Above 20-Day Average
         </div>
-        <div class="flex items-center gap-2 text-xs text-textMuted mt-1">
-          <span class="w-4 h-1 rounded-full" :style="{ backgroundColor: COLOR_MAP['^NDX'] }"></span>
-          <span>NDX (Benchmark)</span>
+        <div class="flex items-center gap-3 text-xs text-textMuted mt-1">
+          <span class="flex items-center gap-2">
+            <span class="w-4 h-1 rounded-full" :style="{ backgroundColor: COLOR_MAP['^NDX'] }"></span>
+            <span>NDX (Benchmark)</span>
+          </span>
+          <span class="flex items-center gap-2">
+            <span
+              class="w-4 h-1 rounded-full"
+              :style="{ backgroundColor: COLOR_MAP[selectedSymbol] }"
+            ></span>
+            <span>{{ selectedSymbol.replace('$', '') }} (Breadth)</span>
+          </span>
         </div>
       </div>
-      <TimeRangeSelector v-model="rangeKey" :options="['1W', '1M', '3M', 'YTD', '1Y', '5Y']" />
+      <div class="flex flex-wrap items-center gap-4">
+        <label class="text-sm uppercase tracking-wide text-textMuted flex flex-col gap-1">
+          Breadth Indicator
+          <select
+            v-model="selectedSymbol"
+            class="bg-black/40 border border-white/20 rounded px-2 py-1 text-white text-sm focus:outline-none"
+          >
+            <option v-for="option in BREADTH_OPTIONS" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+        <TimeRangeSelector v-model="rangeKey" :options="['1W', '1M', '3M', 'YTD', '1Y', '5Y']" />
+      </div>
     </div>
     <div class="relative flex-1 w-full min-h-[360px]">
       <div ref="container" class="absolute inset-0"></div>
@@ -210,10 +227,6 @@ onBeforeUnmount(() => {
           <span>{{ entry.value?.toFixed(2) ?? '--' }}%</span>
         </div>
       </div>
-    </div>
-    <div class="flex flex-col gap-2">
-      <div class="text-xs uppercase tracking-wide text-textMuted">Toggle Breadth Indicators</div>
-      <LegendToggle v-model:activeKeys="activeSymbols" :items="legendItems" />
     </div>
   </div>
 </template>
