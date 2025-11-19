@@ -24,6 +24,9 @@ const PRICE_COLOR = '#7dd3fc';
 
 const rangeKey = ref('1M');
 const selectedSymbol = ref<BreadthSymbol>(BREADTH_OPTIONS[0].value);
+const selectedOption = computed(
+  () => BREADTH_OPTIONS.find((option) => option.value === selectedSymbol.value) ?? BREADTH_OPTIONS[0],
+);
 
 const { data, refetch } = useQuery({
   queryKey: computed(() => ['market-breadth', rangeKey.value, selectedSymbol.value]),
@@ -222,19 +225,15 @@ onBeforeUnmount(() => {
         </div>
         <div class="flex items-center gap-3 text-xs text-textMuted mt-1">
           <span class="flex items-center gap-2">
-            <span class="w-4 h-1 rounded-full" :style="{ backgroundColor: COLOR_MAP['^NDX'] }"></span>
-            <span>NDX % Change (Left Axis)</span>
-          </span>
-          <span class="flex items-center gap-2">
             <span
               class="w-4 h-1 rounded-full"
               :style="{ backgroundColor: COLOR_MAP[selectedSymbol] }"
             ></span>
-            <span>{{ selectedSymbol.replace('$', '') }} (Breadth)</span>
+            <span>{{ selectedOption.label }} (Left Axis)</span>
           </span>
           <span class="flex items-center gap-2">
             <span class="w-4 h-1 rounded-full" :style="{ backgroundColor: PRICE_COLOR }"></span>
-            <span>NDX Price (Right Axis)</span>
+            <span>NDX Index (Right Axis)</span>
           </span>
         </div>
       </div>
