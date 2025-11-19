@@ -80,7 +80,7 @@ def _estimate_records(start_date: date, end_date: date) -> int:
 def _fetch_barchart_relative(symbol: str, start_date: date, end_date: date) -> List[ValuePoint]:
     client = barchart_api.Api()
     limit = _estimate_records(start_date, end_date)
-    response = client.get_stock(symbol=symbol, order="desc", max_records=limit)
+    response = client.get_stock(symbol=symbol, max_records=limit)
     if response.status_code != 200:
         logger.error("Barchart API returned %s for %s", response.status_code, symbol)
         raise ValueError(f"Barchart API 请求失败 ({symbol})")
