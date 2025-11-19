@@ -15,12 +15,12 @@ const BREADTH_OPTIONS = [
 type BreadthSymbol = (typeof BREADTH_OPTIONS)[number]['value'];
 
 const COLOR_MAP: Record<string, string> = {
-  '^NDX': '#f5f5f5',
-  '$NDTW': '#38bdf8',
-  '$NDFI': '#facc15',
-  '$NDTH': '#fb7185',
+  '^NDX': '#f04949',
+  '$NDTW': '#f04949',
+  '$NDFI': '#f04949',
+  '$NDTH': '#f04949',
 };
-const PRICE_COLOR = '#7dd3fc';
+const PRICE_COLOR = '#bdc3c7';
 
 const rangeKey = ref('1M');
 const selectedSymbol = ref<BreadthSymbol>(BREADTH_OPTIONS[0].value);
