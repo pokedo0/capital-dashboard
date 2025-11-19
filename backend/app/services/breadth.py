@@ -72,7 +72,7 @@ def _load_benchmark(session: Session, start_date: date, end_date: date) -> List[
 
 
 def _fetch_barchart_relative(symbol: str, start_date: date, end_date: date) -> List[ValuePoint]:
-    client = barchart_api.Api(api_key=settings.barchart_api_key)
+    client = barchart_api.Api()
     response = client.get_stock(symbol=symbol, start_date=start_date, end_date=end_date, order="asc")
     if response.status_code != 200:
         logger.error("Barchart API returned %s for %s", response.status_code, symbol)
