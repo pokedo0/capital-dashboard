@@ -11,6 +11,7 @@ from .db import get_session, init_db, session_scope
 from .schemas.market import (
     DrawdownResponse,
     FearGreedResponse,
+    MarketBreadthResponse,
     MarketSummary,
     RelativeToResponse,
     SectorSummaryResponse,
@@ -26,6 +27,7 @@ from .services.market_data import (
     get_relative_performance,
     get_sector_summary,
 )
+from .services.breadth import get_market_breadth_series
 from .services.time_ranges import RANGE_TO_DAYS
 from .services.yahoo_client import fetch_and_store
 from .utils.cache import TTLCache
@@ -42,6 +44,7 @@ sector_cache: TTLCache[SectorSummaryResponse] = TTLCache(settings.cache_ttl_seco
 drawdown_cache: TTLCache[DrawdownResponse] = TTLCache(settings.cache_ttl_seconds)
 relative_to_cache: TTLCache[RelativeToResponse] = TTLCache(settings.cache_ttl_seconds)
 fear_greed_cache: TTLCache[FearGreedResponse] = TTLCache(settings.cache_ttl_seconds)
+breadth_cache: TTLCache[MarketBreadthResponse] = TTLCache(settings.cache_ttl_seconds)
 
 app.add_middleware(
     CORSMiddleware,
@@ -79,6 +82,7 @@ def daily_refresh_job() -> None:
     drawdown_cache.clear()
     relative_to_cache.clear()
     fear_greed_cache.clear()
+    breadth_cache.clear()
 
 
 @app.on_event("startup")
@@ -210,3 +214,28 @@ def api_fear_greed(
         return fear_greed_cache.get_or_set(key, lambda: get_fear_greed_comparison(session, range_key))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/market/breadth", response_model=MarketBreadthResponse)
+def api_market_breadth(
+    symbols: str = Query("$NDTW", description="Comma separated Barchart breadth symbols"),
+    range_key: str = Query("1M", alias="range"),
+    session: Session = Depends(get_session),
+) -> MarketBreadthResponse:
+    requested = [token.strip() for token in symbols.split(",") if token.strip()]
+    normalized = []
+    for token in requested:
+        symbol = token.upper()
+        if symbol and not symbol.startswith("$"):
+            symbol = f"${symbol}"
+        if symbol:
+            normalized.append(symbol)
+    if not normalized:
+        raise HTTPException(status_code=400, detail="symbols parameter required")
+    cache_key = ("breadth", ",".join(normalized), range_key.upper())
+    try:
+        return breadth_cache.get_or_set(
+            cache_key, lambda: get_market_breadth_series(session, normalized, range_key)
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc

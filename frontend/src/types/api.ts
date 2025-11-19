@@ -22,6 +22,11 @@ export interface RelativeSeries {
   points: RelativePoint[];
 }
 
+export interface MarketBreadthResponse {
+  benchmark: RelativeSeries;
+  series: RelativeSeries[];
+}
+
 export interface MarketSummary {
   market: string;
   date: string;

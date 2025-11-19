@@ -3,6 +3,7 @@ import type {
   DailyPerformanceItem,
   DrawdownResponse,
   FearGreedResponse,
+  MarketBreadthResponse,
   MarketSummary,
   RelativeSeries,
   RelativeToResponse,
@@ -72,6 +73,16 @@ export const fetchFearGreedComparison = async (
 ): Promise<FearGreedResponse> => {
   const { data } = await api.get<FearGreedResponse>('/api/market/fear-greed', {
     params: { range },
+  });
+  return data;
+};
+
+export const fetchMarketBreadth = async (
+  symbols: string[],
+  range = '1M',
+): Promise<MarketBreadthResponse> => {
+  const { data } = await api.get<MarketBreadthResponse>('/api/market/breadth', {
+    params: { symbols: symbols.join(','), range },
   });
   return data;
 };

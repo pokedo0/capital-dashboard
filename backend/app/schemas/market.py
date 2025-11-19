@@ -45,6 +45,11 @@ class ValuePoint(BaseModel):
     value: float
 
 
+class RelativeSeries(BaseModel):
+    symbol: str
+    points: List[ValuePoint]
+
+
 class DrawdownResponse(BaseModel):
     symbol: str
     drawdown: List[ValuePoint]
@@ -63,3 +68,8 @@ class RelativeToResponse(BaseModel):
 class FearGreedResponse(BaseModel):
     index: List[ValuePoint]
     spy: List[ValuePoint]
+
+
+class MarketBreadthResponse(BaseModel):
+    benchmark: RelativeSeries
+    series: List[RelativeSeries]

@@ -10,6 +10,7 @@ import MultiAssetComparisonChart from './components/MultiAssetComparisonChart.vu
 import DrawdownChart from './components/DrawdownChart.vue';
 import RelativeComparisonChart from './components/RelativeComparisonChart.vue';
 import FearGreedComparisonChart from './components/FearGreedComparisonChart.vue';
+import MarketBreadthChart from './components/MarketBreadthChart.vue';
 import { fetchMarketSummary } from './services/api';
 
 const { data: sp500Summary } = useQuery({
@@ -50,6 +51,11 @@ const { data: nasdaqSummary } = useQuery({
           <Mag7RelativeChart />
           <Mag7HistogramPerformance />
         </div>
+      </section>
+
+      <section class="space-y-4">
+        <div class="text-2xl text-accentCyan font-semibold uppercase">Market Breadth Dashboard</div>
+        <MarketBreadthChart />
       </section>
 
       <section class="space-y-6">

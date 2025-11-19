@@ -1,4 +1,5 @@
 from functools import lru_cache
+import os
 from typing import List
 
 from pydantic import BaseModel, Field
@@ -33,6 +34,7 @@ class Settings(BaseModel):
     multi_asset_symbols: List[str] = Field(default=["SPY", "GLD", "QQQ", "BTC-USD"])
     timezone: str = "US/Eastern"
     cache_ttl_seconds: int = 60
+    barchart_api_key: str | None = Field(default_factory=lambda: os.getenv("BARCHART_API_KEY"))
 
 
 @lru_cache(maxsize=1)
