@@ -71,14 +71,22 @@ def _load_benchmark(session: Session, start_date: date, end_date: date) -> List[
     return _to_relative_points(pairs)
 
 
+def _estimate_records(start_date: date, end_date: date) -> int:
+    days = (end_date - start_date).days
+    # 留出 10 天缓冲，避免节假日缺口导致数据不足
+    return max(30, days + 10)
+
+
 def _fetch_barchart_relative(symbol: str, start_date: date, end_date: date) -> List[ValuePoint]:
     client = barchart_api.Api()
-    response = client.get_stock(symbol=symbol, start_date=start_date, end_date=end_date, order="asc")
+    limit = _estimate_records(start_date, end_date)
+    response = client.get_stock(symbol=symbol, order="desc", max_records=limit)
     if response.status_code != 200:
         logger.error("Barchart API returned %s for %s", response.status_code, symbol)
         raise ValueError(f"Barchart API 请求失败 ({symbol})")
     raw_series = _parse_barchart_rows(response.text)
     filtered = [row for row in raw_series if start_date <= row[0] <= end_date]
+    filtered.sort(key=lambda row: row[0])
     return _to_relative_points(filtered)
 
 
