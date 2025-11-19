@@ -39,16 +39,11 @@ def _parse_barchart_rows(text: str) -> List[Tuple[date, float]]:
 
 
 def _to_relative_points(series: List[Tuple[date, float]]) -> List[ValuePoint]:
-    if not series:
-        return []
-    first_value = next((value for _, value in series if value is not None and value != 0), None)
-    if first_value is None:
-        return []
-    points: List[ValuePoint] = []
-    for entry_date, value in series:
-        change_pct = ((value / first_value) - 1.0) * 100
-        points.append(ValuePoint(time=entry_date, value=change_pct))
-    return points
+    return [
+        ValuePoint(time=entry_date, value=value)
+        for entry_date, value in series
+        if value is not None
+    ]
 
 
 def _load_benchmark(session: Session, start_date: date, end_date: date) -> Tuple[List[ValuePoint], List[ValuePoint]]:
