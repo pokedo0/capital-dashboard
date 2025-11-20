@@ -416,10 +416,6 @@ const vixLabel = computed(() => {
           Fullscreen
         </button>
       </div>
-      <div class="text-xs uppercase tracking-wide text-textMuted">
-        当前 VIX：
-        <span class="text-red-400 font-semibold">{{ vixLabel }}</span>
-      </div>
     </div>
     <div class="flex flex-wrap gap-2 text-xs uppercase tracking-wide">
       <span
@@ -460,12 +456,16 @@ const vixLabel = computed(() => {
         </div>
       </div>
     </div>
-    <div class="text-xs uppercase tracking-wide flex gap-6 text-textMuted">
+    <div class="text-xs uppercase tracking-wide flex flex-wrap gap-6 text-textMuted">
       <span class="flex items-center gap-2">
         <span class="w-4 h-1 bg-red-400 rounded-full"></span> Fear & Greed Index
       </span>
       <span class="flex items-center gap-2">
         <span class="w-4 h-1 bg-slate-300 rounded-full"></span> SPY Close
+      </span>
+      <span class="flex items-center gap-2">
+        <span>当前 VIX：</span>
+        <span class="text-red-400 font-semibold">{{ vixLabel }}</span>
       </span>
     </div>
     <FullscreenModal
