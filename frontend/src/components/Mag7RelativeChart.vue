@@ -110,8 +110,8 @@ const ensureSeries = (chart: IChartApi | null, map: Map<string, LineSeries>, sym
   if (map.has(symbol)) return map.get(symbol)!;
   const series = chart.addSeries(LineSeriesDefinition, {
     color: COLOR_MAP[symbol] ?? '#ffffff',
-    lineWidth: symbol === '^NDX' ? 1 : 2,
-    lineStyle: symbol === '^NDX' ? 1 : 0,
+    lineWidth: symbol === '^NDX' ? 3 : 2,
+    lineStyle: symbol === '^NDX' ? 2 : 0,
     priceLineVisible: false,
   });
   map.set(symbol, series);
