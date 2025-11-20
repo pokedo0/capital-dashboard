@@ -6,6 +6,7 @@ import TimeRangeSelector from './TimeRangeSelector.vue';
 import { fetchRelativePerformance } from '../services/api';
 
 const SYMBOLS = ['NVDA', 'GOOG', 'AMZN', 'AAPL', 'META', 'MSFT', 'TSLA', '^NDX', 'AVGO'] as const;
+const BASELINE_SYMBOL = '^NDX';
 const SYMBOL_LABELS: Record<(typeof SYMBOLS)[number], string> = {
   '^NDX': 'NDX',
   NVDA: 'NVDA',
@@ -87,18 +88,27 @@ const renderChart = () => {
     series: [
       {
         type: 'bar',
-        data: payload.map((item) => ({
-          value: item.change,
-          itemStyle: { color: item.change >= 0 ? '#22c55e' : '#ef4444' },
-          label: {
-            show: true,
-            position: item.change >= 0 ? 'top' : 'insideBottom',
-            formatter: `${item.change.toFixed(2)}%`,
-            color: '#f8fafc',
-            fontSize: 11,
-            distance: 4,
-          },
-        })),
+        data: payload.map((item) => {
+          const isBaseline = item.symbol === BASELINE_SYMBOL;
+          const color = isBaseline ? '#f5f5f5' : item.change >= 0 ? '#22c55e' : '#ef4444';
+          return {
+            value: item.change,
+            itemStyle: {
+              color,
+              borderColor: isBaseline ? '#38bdf8' : undefined,
+              borderWidth: isBaseline ? 1.5 : 0,
+            },
+            label: {
+              show: true,
+              position: item.change >= 0 ? 'top' : 'insideBottom',
+              formatter: `${item.change.toFixed(2)}%`,
+              color: isBaseline ? '#38bdf8' : '#f8fafc',
+              fontSize: 11,
+              fontWeight: isBaseline ? '600' : 'normal',
+              distance: 4,
+            },
+          };
+        }),
       },
     ],
   };
