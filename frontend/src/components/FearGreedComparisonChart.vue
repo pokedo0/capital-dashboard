@@ -17,8 +17,8 @@ import { fetchFearGreedComparison } from '../services/api';
 
 type LineSeries = ISeriesApi<'Line'>;
 
-const rangeOptions = ['1W', '1M', '3M', '6M', 'YTD', '1Y', '5Y'];
-const rangeKey = ref('6M');
+const rangeOptions = ['1M', '3M', '6M', 'YTD', '1Y', '5Y'];
+const rangeKey = ref('1Y');
 const showFullscreen = ref(false);
 
 const { data, refetch } = useQuery({
