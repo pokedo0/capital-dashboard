@@ -417,13 +417,16 @@ const vixLabel = computed(() => {
         </button>
       </div>
     </div>
-    <div class="flex flex-wrap gap-2 text-xs uppercase tracking-wide">
+    <div class="flex flex-wrap gap-2 text-xs uppercase tracking-wide items-center">
       <span
         v-for="badge in zoneBadges"
         :key="badge.text"
         :class="['px-2 py-0.5 rounded-full', badge.color]"
       >
         {{ badge.text }}
+      </span>
+      <span class="ml-2 text-textMuted flex items-center gap-1">
+        当前 VIX：<span class="text-red-400 font-semibold">{{ vixLabel }}</span>
       </span>
     </div>
     <div class="relative flex-1 w-full min-h-[360px]">
@@ -462,10 +465,6 @@ const vixLabel = computed(() => {
       </span>
       <span class="flex items-center gap-2">
         <span class="w-4 h-1 bg-slate-300 rounded-full"></span> SPY Close
-      </span>
-      <span class="flex items-center gap-2">
-        <span>当前 VIX：</span>
-        <span class="text-red-400 font-semibold">{{ vixLabel }}</span>
       </span>
     </div>
     <FullscreenModal
