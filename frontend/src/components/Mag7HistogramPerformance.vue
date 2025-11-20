@@ -5,7 +5,20 @@ import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import { fetchRelativePerformance } from '../services/api';
 
-const SYMBOLS = ['NVDA', 'GOOG', 'AMZN', 'AAPL', 'META', 'MSFT', 'TSLA'];
+const SYMBOLS = ['NVDA', 'GOOG', 'AMZN', 'AAPL', 'META', 'MSFT', 'TSLA', '^NDX', 'AVGO'] as const;
+const SYMBOL_LABELS: Record<(typeof SYMBOLS)[number], string> = {
+  '^NDX': 'NDX',
+  NVDA: 'NVDA',
+  GOOG: 'GOOG',
+  AMZN: 'AMZN',
+  AAPL: 'AAPL',
+  META: 'META',
+  MSFT: 'MSFT',
+  TSLA: 'TSLA',
+  AVGO: 'AVGO',
+};
+const isTrackedSymbol = (value: string): value is (typeof SYMBOLS)[number] =>
+  (SYMBOLS as readonly string[]).includes(value as (typeof SYMBOLS)[number]);
 const rangeOptions = ['1W', '1M', '3M', 'YTD', '1Y'];
 
 const rangeKey = ref('1W');
@@ -36,10 +49,13 @@ const seriesData = computed(() => {
       if (!first || !last || typeof first.value !== 'number' || typeof last.value !== 'number') {
         return null;
       }
+      if (!isTrackedSymbol(series.symbol)) return null;
       const change = last.value - first.value;
-      return { symbol: series.symbol, change };
+      return { symbol: series.symbol, change, label: SYMBOL_LABELS[series.symbol] ?? series.symbol };
     })
-    .filter((item): item is { symbol: string; change: number } => !!item)
+    .filter(
+      (item): item is { symbol: (typeof SYMBOLS)[number]; change: number; label: string } => !!item,
+    )
     .sort((a, b) => b.change - a.change);
 });
 
@@ -54,7 +70,7 @@ const renderChart = () => {
     grid: { left: 50, right: 40, top: 30, bottom: 40, containLabel: true },
     xAxis: {
       type: 'category',
-      data: payload.map((item) => item.symbol),
+      data: payload.map((item) => item.label),
       axisLabel: { color: '#f8fafc', margin: 10 },
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.2)' } },
     },
