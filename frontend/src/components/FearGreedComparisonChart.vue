@@ -425,8 +425,9 @@ const vixLabel = computed(() => {
       >
         {{ badge.text }}
       </span>
-      <span class="ml-2 text-textMuted flex items-center gap-1">
-        当前 VIX：<span class="text-red-400 font-semibold">{{ vixLabel }}</span>
+      <span class="ml-2 text-textMuted flex items-center gap-1 text-sm">
+        Fear & Greed Index：
+        <span class="text-red-400 font-semibold text-base">{{ vixLabel }}</span>
       </span>
     </div>
     <div class="relative flex-1 w-full min-h-[360px]">
