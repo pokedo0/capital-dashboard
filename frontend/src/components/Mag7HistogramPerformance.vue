@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import { fetchRelativePerformance } from '../services/api';
 
-const SYMBOLS = ['NVDA', 'GOOG', 'AMZN', 'AAPL', 'META', 'MSFT', 'TSLA', '^NDX', 'AVGO'] as const;
+const SYMBOLS = ['NVDA', 'GOOG', 'AMZN', 'AAPL', 'META', 'MSFT', 'TSLA', '^NDX', 'AVGO', 'TSM'] as const;
 const BASELINE_SYMBOL = '^NDX';
 const SYMBOL_LABELS: Record<(typeof SYMBOLS)[number], string> = {
   '^NDX': 'NDX',
@@ -17,6 +17,7 @@ const SYMBOL_LABELS: Record<(typeof SYMBOLS)[number], string> = {
   MSFT: 'MSFT',
   TSLA: 'TSLA',
   AVGO: 'AVGO',
+  TSM: 'TSM',
 };
 const isTrackedSymbol = (value: string): value is (typeof SYMBOLS)[number] =>
   (SYMBOLS as readonly string[]).includes(value as (typeof SYMBOLS)[number]);
