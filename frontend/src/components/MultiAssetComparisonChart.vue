@@ -103,7 +103,9 @@ const histogramBars = computed(() => {
     const lastPoint = series.points[series.points.length - 1];
     if (typeof lastPoint?.value !== 'number') return null;
     return { symbol: HISTOGRAM_LABELS[symbol] ?? symbol, value: lastPoint.value };
-  }).filter((item): item is { symbol: string; value: number } => !!item);
+  })
+    .filter((item): item is { symbol: string; value: number } => !!item)
+    .sort((a, b) => b.value - a.value);
 });
 let mainCrosshairHandler: ((param: MouseEventParams) => void) | null = null;
 let fullscreenCrosshairHandler: ((param: MouseEventParams) => void) | null = null;
@@ -326,9 +328,12 @@ const attachCrosshair = (
           </div>
         </div>
       </div>
-      <div class="min-h-[320px]">
-        <TwoAssetHistogram v-if="histogramBars.length" :bars="histogramBars" bare />
-        <div v-else class="bg-panel/30 border border-dashed border-white/20 rounded-xl h-full flex items-center justify-center text-textMuted text-sm">
+      <div class="min-h-[360px] flex">
+        <TwoAssetHistogram v-if="histogramBars.length" :bars="histogramBars" bare class="flex-1" />
+        <div
+          v-else
+          class="bg-panel/30 border border-dashed border-white/20 rounded-xl flex-1 flex items-center justify-center text-textMuted text-sm"
+        >
           Loading histogram...
         </div>
       </div>

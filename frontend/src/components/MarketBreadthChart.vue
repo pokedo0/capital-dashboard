@@ -14,7 +14,7 @@ import { fetchMarketBreadth } from '../services/api';
 type LineSeries = ISeriesApi<'Line'>;
 type OptionItem = { value: string; label: string };
 
-const FALLBACK_RANGES = ['1M', '3M', 'YTD', '1Y', '5Y'];
+const FALLBACK_RANGES = ['1W', '1M', '3M', 'YTD', '1Y', '5Y'];
 const BREADTH_COLOR = '#f04949';
 const PRICE_COLOR = '#bdc3c7';
 
@@ -36,12 +36,12 @@ const pickDefaultSymbol = (options: OptionItem[]): string => {
 };
 
 const resolvedRangeOptions = computed(() => props.rangeOptions ?? FALLBACK_RANGES);
-const pickDefaultRange = (options: string[]): string => (options.includes('1Y') ? '1Y' : options[0] ?? '1Y');
+const pickDefaultRange = (options: string[]): string => (options.includes('1M') ? '1M' : options[0] ?? '1M');
 
 const rangeKey = ref(pickDefaultRange(resolvedRangeOptions.value));
 watch(resolvedRangeOptions, (next) => {
   if (!next.length) {
-    rangeKey.value = '1Y';
+    rangeKey.value = '1M';
   } else if (!next.includes(rangeKey.value)) {
     rangeKey.value = pickDefaultRange(next);
   }
@@ -241,7 +241,7 @@ const attachCrosshair = () => {
     if (priceSeries) {
       const priceValue = param.seriesData.get(priceSeries);
       entries.push({
-        label: props.benchmarkLabel,
+        label: 'NDX Index',
         color: PRICE_COLOR,
         value: extractValue(priceValue),
         unit: 'index',
