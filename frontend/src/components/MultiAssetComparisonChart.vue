@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import {
   createChart,
+  LineSeries as LineSeriesDefinition,
   PriceScaleMode,
   type IChartApi,
   type ISeriesApi,
@@ -141,7 +142,7 @@ const initChart = (element: HTMLDivElement) => {
 const ensureSeries = (chart: IChartApi | null, map: Map<string, LineSeries>, symbol: AssetSymbol) => {
   if (!chart) return null;
   if (map.has(symbol)) return map.get(symbol)!;
-  const series = chart.addLineSeries({
+  const series = chart.addSeries(LineSeriesDefinition, {
     color: COLORS[symbol],
     lineWidth: symbol === 'BTC-USD' ? 3 : 2,
   });

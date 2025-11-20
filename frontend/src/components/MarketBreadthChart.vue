@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { createChart, type IChartApi, type ISeriesApi, type MouseEventParams } from 'lightweight-charts';
+import {
+  createChart,
+  LineSeries as LineSeriesDefinition,
+  type IChartApi,
+  type ISeriesApi,
+  type MouseEventParams,
+} from 'lightweight-charts';
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import { fetchMarketBreadth } from '../services/api';
@@ -8,9 +14,9 @@ import { fetchMarketBreadth } from '../services/api';
 type LineSeries = ISeriesApi<'Line'>;
 
 const BREADTH_OPTIONS = [
-  { value: '$NDTW', label: 'NDTW - Stocks Above 20D Avg' },
-  { value: '$NDFI', label: 'NDFI - Fast Breadth Oscillator' },
-  { value: '$NDTH', label: 'NDTH - Momentum Breadth' },
+  { value: '$NDTW', label: 'NDTW - Above 20-Day Average' },
+  { value: '$NDFI', label: 'NDFI - Above 50-Day Average' },
+  { value: '$NDTH', label: 'NDTH - Above 200-Day Average' },
 ] as const;
 type BreadthSymbol = (typeof BREADTH_OPTIONS)[number]['value'];
 
@@ -80,7 +86,7 @@ const ensureBreadthSeries = () => {
     if (breadthSeries) {
       chart.removeSeries(breadthSeries);
     }
-    breadthSeries = chart.addLineSeries({
+    breadthSeries = chart.addSeries(LineSeriesDefinition, {
       color: COLOR_MAP[selectedSymbol.value] ?? '#ffffff',
       lineWidth: 2,
       priceScaleId: 'left',
@@ -95,7 +101,7 @@ const ensureBreadthSeries = () => {
 const ensurePriceSeries = () => {
   if (!chart) return null;
   if (priceSeries) return priceSeries;
-  priceSeries = chart.addLineSeries({
+  priceSeries = chart.addSeries(LineSeriesDefinition, {
     color: PRICE_COLOR,
     lineWidth: 2,
     priceScaleId: 'right',
@@ -212,7 +218,7 @@ onBeforeUnmount(() => {
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">
-          Nasdaq 100 Stocks Above 20-Day Average
+          Nasdaq 100 Stocks Above X-Day Average
         </div>
         <div class="flex items-center gap-3 text-xs text-textMuted mt-1">
           <span class="flex items-center gap-2">

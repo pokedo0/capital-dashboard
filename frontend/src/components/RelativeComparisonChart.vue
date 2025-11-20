@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { createChart, type IChartApi, type ISeriesApi, type MouseEventParams } from 'lightweight-charts';
+import {
+  createChart,
+  LineSeries as LineSeriesDefinition,
+  type IChartApi,
+  type ISeriesApi,
+  type MouseEventParams,
+} from 'lightweight-charts';
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import { fetchRelativeTo } from '../services/api';
@@ -65,11 +71,11 @@ const initChart = () => {
   });
   chart.applyOptions({ width: size.width, height: size.height });
 
-  ratioSeries = chart.addLineSeries({
+  ratioSeries = chart.addSeries(LineSeriesDefinition, {
     color: '#60a5fa',
     lineWidth: 2,
   });
-  averageSeries = chart.addLineSeries({
+  averageSeries = chart.addSeries(LineSeriesDefinition, {
     color: '#f78c1f',
     lineWidth: 2,
   });

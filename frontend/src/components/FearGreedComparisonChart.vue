@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import {
   createChart,
+  LineSeries as LineSeriesDefinition,
   LineStyle,
   PriceScaleMode,
   type IChartApi,
@@ -98,7 +99,7 @@ const ensureSeries = (chart: IChartApi | null, type: 'fear' | 'spy'): LineSeries
     type === 'fear'
       ? { color: '#ef4444', lineWidth: 2 as const, priceScaleId: 'left' as const, ...shared }
       : { color: '#bdc3c7', lineWidth: 2 as const, priceScaleId: 'right' as const, ...shared };
-  return chart.addLineSeries(options);
+  return chart.addSeries(LineSeriesDefinition, options);
 };
 
 const tooltipStyle = (position: { x: number; y: number }, container: HTMLElement | null) => {

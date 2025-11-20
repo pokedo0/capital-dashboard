@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { createChart, type IChartApi, type ISeriesApi, type MouseEventParams } from 'lightweight-charts';
+import {
+  createChart,
+  LineSeries as LineSeriesDefinition,
+  type IChartApi,
+  type ISeriesApi,
+  type MouseEventParams,
+} from 'lightweight-charts';
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import LegendToggle from './LegendToggle.vue';
@@ -95,7 +101,7 @@ const initChart = (container: HTMLDivElement): IChartApi => {
 const ensureSeries = (chart: IChartApi | null, map: Map<string, LineSeries>, symbol: SymbolKey) => {
   if (!chart) return null;
   if (map.has(symbol)) return map.get(symbol)!;
-  const series = chart.addLineSeries({
+  const series = chart.addSeries(LineSeriesDefinition, {
     color: COLOR_MAP[symbol] ?? '#ffffff',
     lineWidth: symbol === '^NDX' ? 1 : 2,
     lineStyle: symbol === '^NDX' ? 1 : 0,

@@ -2,6 +2,8 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import {
   CrosshairMode,
+  HistogramSeries as HistogramSeriesDefinition,
+  LineSeries as LineSeriesDefinition,
   type BusinessDay,
   type ChartOptions,
   createChart,
@@ -164,17 +166,17 @@ const createBundle = (element: HTMLDivElement): ChartBundle => {
     axisLabelVisible: true,
     lastValueVisible: true,
   } as const;
-  const priceSeries = chart.addLineSeries({
+  const priceSeries = chart.addSeries(LineSeriesDefinition, {
     color: '#f78c1f',
     lineWidth: 2,
     ...sharedSeriesOptions,
   });
-  const averageSeries = chart.addLineSeries({
+  const averageSeries = chart.addSeries(LineSeriesDefinition, {
     color: '#ef4444',
     lineWidth: 2,
     ...sharedSeriesOptions,
   });
-  const volumeSeries = chart.addHistogramSeries({
+  const volumeSeries = chart.addSeries(HistogramSeriesDefinition, {
     priceScaleId: 'left',
     color: '#2563eb',
     priceFormat: {

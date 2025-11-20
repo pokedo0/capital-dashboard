@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { createChart, type IChartApi, type ISeriesApi, type MouseEventParams, type Time } from 'lightweight-charts';
+import {
+  AreaSeries as AreaSeriesDefinition,
+  LineSeries as LineSeriesDefinition,
+  createChart,
+  type IChartApi,
+  type ISeriesApi,
+  type MouseEventParams,
+  type Time,
+} from 'lightweight-charts';
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import { fetchDrawdown } from '../services/api';
@@ -92,7 +100,7 @@ const initChart = () => {
     entireTextOnly: true,
   });
 
-  fillAreaSeries = chart.addAreaSeries({
+  fillAreaSeries = chart.addSeries(AreaSeriesDefinition, {
     priceScaleId: 'left',
     lineColor: 'rgba(37,99,235,0)',
     topColor: 'rgba(37,99,235,0.85)',
@@ -103,7 +111,7 @@ const initChart = () => {
       minMove: 0.01,
     },
   });
-  maskAreaSeries = chart.addAreaSeries({
+  maskAreaSeries = chart.addSeries(AreaSeriesDefinition, {
     priceScaleId: 'left',
     lineColor: '#050505',
     topColor: '#050505',
@@ -114,7 +122,7 @@ const initChart = () => {
       minMove: 0.01,
     },
   });
-  drawdownLineSeries = chart.addLineSeries({
+  drawdownLineSeries = chart.addSeries(LineSeriesDefinition, {
     priceScaleId: 'left',
     color: '#ffffff',
     lineWidth: 1,
@@ -129,12 +137,12 @@ const initChart = () => {
       minMove: 0.01,
     },
   });
-  priceSeries = chart.addLineSeries({
+  priceSeries = chart.addSeries(LineSeriesDefinition, {
     priceScaleId: 'right',
     color: '#f78c1f',
     lineWidth: 2,
   });
-  scaleAnchorSeries = chart.addLineSeries({
+  scaleAnchorSeries = chart.addSeries(LineSeriesDefinition, {
     priceScaleId: 'left',
     color: 'rgba(0,0,0,0)',
     lineWidth: 1,
