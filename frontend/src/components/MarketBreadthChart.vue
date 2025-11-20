@@ -62,6 +62,28 @@ const hoverInfo = ref<
 
 const measureHeight = (el: HTMLElement): number => el.getBoundingClientRect().height || 360;
 
+const tooltipStyle = (position: { x: number; y: number }, container: HTMLElement | null) => {
+  const padding = 12;
+  const offsetX = 16;
+  const offsetY = 12;
+  const containerWidth = container?.clientWidth ?? 0;
+  const containerHeight = container?.clientHeight ?? 0;
+  const tooltipWidth = 220;
+  const tooltipHeight = 140;
+
+  let left = position.x + offsetX;
+  if (containerWidth) {
+    left = Math.min(Math.max(left, padding), containerWidth - tooltipWidth - padding);
+  }
+
+  let top = position.y + offsetY;
+  if (containerHeight) {
+    top = Math.min(Math.max(top, padding), containerHeight - tooltipHeight - padding);
+  }
+
+  return { left: `${left}px`, top: `${top}px` };
+};
+
 const initChart = (el: HTMLDivElement): IChartApi =>
   createChart(el, {
     height: measureHeight(el),
@@ -254,7 +276,7 @@ onBeforeUnmount(() => {
       <div
         v-if="hoverInfo"
         class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50 max-w-[220px]"
-        :style="{ left: `calc(${hoverInfo.position.x}px + 12px)`, top: `calc(${hoverInfo.position.y}px - 40px)` }"
+        :style="tooltipStyle(hoverInfo.position, container)"
       >
         <div>{{ hoverInfo.time }}</div>
         <div v-for="entry in hoverInfo.entries" :key="entry.label" class="flex justify-between gap-3">
