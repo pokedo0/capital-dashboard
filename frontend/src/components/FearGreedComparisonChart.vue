@@ -464,7 +464,10 @@ const vixLabel = computed(() => {
         <span class="w-4 h-1 bg-slate-300 rounded-full"></span> SPY Close
       </span>
     </div>
-    <div class="text-xs text-red-400">当前 VIX：{{ vixLabel }}</div>
+    <div class="text-xs uppercase tracking-wide text-textMuted">
+      当前 VIX：
+      <span class="text-red-400 font-semibold">{{ vixLabel }}</span>
+    </div>
     <FullscreenModal
       :open="showFullscreen"
       title="Fear & Greed vs SPY"
