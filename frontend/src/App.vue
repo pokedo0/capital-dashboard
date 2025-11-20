@@ -75,6 +75,7 @@ const { data: nasdaqSummary } = useQuery({
             benchmark-label="NDX Index"
             default-symbol="$NDTW"
             chart-key="nasdaq-breadth"
+            default-range="1Y"
           />
           <MarketBreadthChart
             title="S&P 500 Stocks Above X-Day Average"
@@ -83,6 +84,7 @@ const { data: nasdaqSummary } = useQuery({
             benchmark-label="SPX Index"
             default-symbol="$S5TW"
             chart-key="spx-breadth"
+            default-range="1Y"
           />
         </div>
       </section>

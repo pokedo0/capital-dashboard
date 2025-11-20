@@ -26,6 +26,7 @@ const props = defineProps<{
   defaultSymbol?: string;
   chartKey?: string;
   rangeOptions?: string[];
+  defaultRange?: string;
 }>();
 
 const pickDefaultSymbol = (options: OptionItem[]): string => {
@@ -36,7 +37,13 @@ const pickDefaultSymbol = (options: OptionItem[]): string => {
 };
 
 const resolvedRangeOptions = computed(() => props.rangeOptions ?? FALLBACK_RANGES);
-const pickDefaultRange = (options: string[]): string => (options.includes('1M') ? '1M' : options[0] ?? '1M');
+const pickDefaultRange = (options: string[]): string => {
+  if (props.defaultRange && options.includes(props.defaultRange)) {
+    return props.defaultRange;
+  }
+  if (options.includes('1M')) return '1M';
+  return options[0] ?? '1M';
+};
 
 const rangeKey = ref(pickDefaultRange(resolvedRangeOptions.value));
 watch(resolvedRangeOptions, (next) => {
