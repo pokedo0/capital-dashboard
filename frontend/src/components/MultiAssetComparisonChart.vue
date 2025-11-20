@@ -147,6 +147,7 @@ const ensureSeries = (chart: IChartApi | null, map: Map<string, LineSeries>, sym
   const series = chart.addSeries(LineSeriesDefinition, {
     color: COLORS[symbol],
     lineWidth: symbol === 'BTC-USD' ? 3 : 2,
+    priceLineVisible: false,
   });
   map.set(symbol, series);
   return series;

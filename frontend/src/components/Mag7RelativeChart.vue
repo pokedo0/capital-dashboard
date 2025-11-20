@@ -105,6 +105,7 @@ const ensureSeries = (chart: IChartApi | null, map: Map<string, LineSeries>, sym
     color: COLOR_MAP[symbol] ?? '#ffffff',
     lineWidth: symbol === '^NDX' ? 1 : 2,
     lineStyle: symbol === '^NDX' ? 1 : 0,
+    priceLineVisible: false,
   });
   map.set(symbol, series);
   return series;
