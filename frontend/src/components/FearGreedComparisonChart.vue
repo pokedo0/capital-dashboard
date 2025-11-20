@@ -13,7 +13,7 @@ import {
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import FullscreenModal from './FullscreenModal.vue';
-import { fetchFearGreedComparison, fetchMarketSummary } from '../services/api';
+import { fetchFearGreedComparison } from '../services/api';
 
 type LineSeries = ISeriesApi<'Line'>;
 
@@ -24,12 +24,6 @@ const showFullscreen = ref(false);
 const { data, refetch } = useQuery({
   queryKey: computed(() => ['fear-greed', rangeKey.value]),
   queryFn: () => fetchFearGreedComparison(rangeKey.value),
-});
-
-const { data: vixSummary } = useQuery({
-  queryKey: ['fear-greed', 'vix-summary'],
-  queryFn: () => fetchMarketSummary('sp500'),
-  staleTime: 60_000,
 });
 
 watch(rangeKey, () => refetch());
@@ -395,10 +389,10 @@ const zoneBadges = [
   { text: 'Greed', color: 'bg-emerald-500/30 text-emerald-200' },
 ];
 
-const vixLabel = computed(() => {
-  const value = vixSummary.value?.vix_value;
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value.toFixed(2);
+const indexLabel = computed(() => {
+  const latest = data.value?.index?.at(-1);
+  if (latest && typeof latest.value === 'number' && Number.isFinite(latest.value)) {
+    return latest.value.toFixed(2);
   }
   return '--';
 });
@@ -408,7 +402,7 @@ const vixLabel = computed(() => {
   <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4">
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
-        <div class="text-xl text-accentCyan font-semibold uppercase">Fear & Greed vs SPY</div>
+        <div class="text-xl text-accentCyan font-semibold uppercase">Fear & Greed Index</div>
       </div>
       <div class="flex items-center gap-3">
         <TimeRangeSelector v-model="rangeKey" :options="rangeOptions" />
@@ -427,7 +421,7 @@ const vixLabel = computed(() => {
       </span>
       <span class="ml-2 text-textMuted flex items-center gap-1 text-sm">
         Fear & Greed Index：
-        <span class="text-red-400 font-semibold text-base">{{ vixLabel }}</span>
+        <span class="text-red-400 font-semibold text-base">{{ indexLabel }}</span>
       </span>
     </div>
     <div class="relative flex-1 w-full min-h-[360px]">
