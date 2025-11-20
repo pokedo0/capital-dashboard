@@ -20,13 +20,13 @@ const EXTENDED_SYMBOLS = [...BASE_SYMBOLS, 'AVGO', 'TSM'] as const;
 type SymbolKey = (typeof EXTENDED_SYMBOLS)[number];
 const SYMBOL_PARAMS: string[] = [...EXTENDED_SYMBOLS];
 const COLOR_MAP: Record<SymbolKey, string> = {
-  NVDA: '#a6ff0d',
-  GOOG: '#facc15',
-  AMZN: '#f97316',
-  AAPL: '#c084fc',
-  META: '#67f0d6',
-  MSFT: '#60a5fa',
-  TSLA: '#f87171',
+  NVDA: '#9edc2f',
+  GOOG: '#f5c242',
+  AMZN: '#4f8fe6',
+  AAPL: '#b58bff',
+  META: '#6be0c6',
+  MSFT: '#4f5dff',
+  TSLA: '#d73737',
   '^NDX': '#f5f5f5',
   AVGO: '#fb7185',
   TSM: '#38bdf8',
