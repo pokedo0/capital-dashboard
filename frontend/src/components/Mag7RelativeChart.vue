@@ -15,9 +15,10 @@ import { fetchRelativePerformance } from '../services/api';
 
 type LineSeries = ISeriesApi<'Line'>;
 
-const SYMBOLS = ['NVDA', 'GOOG', 'AMZN', 'AAPL', 'META', 'MSFT', 'TSLA', '^NDX'] as const;
-type SymbolKey = (typeof SYMBOLS)[number];
-const SYMBOL_PARAMS: string[] = [...SYMBOLS];
+const BASE_SYMBOLS = ['NVDA', 'GOOG', 'AMZN', 'AAPL', 'META', 'MSFT', 'TSLA', '^NDX'] as const;
+const EXTENDED_SYMBOLS = [...BASE_SYMBOLS, 'AVGO', 'TSM'] as const;
+type SymbolKey = (typeof EXTENDED_SYMBOLS)[number];
+const SYMBOL_PARAMS: string[] = [...EXTENDED_SYMBOLS];
 const COLOR_MAP: Record<SymbolKey, string> = {
   NVDA: '#a6ff0d',
   GOOG: '#facc15',
@@ -27,10 +28,16 @@ const COLOR_MAP: Record<SymbolKey, string> = {
   MSFT: '#60a5fa',
   TSLA: '#f87171',
   '^NDX': '#f5f5f5',
+  AVGO: '#fb7185',
+  TSM: '#38bdf8',
 };
 
 const rangeKey = ref('1M');
-const activeKeys = ref<string[]>([...SYMBOLS]);
+const lineupMode = ref<'M7' | 'M9'>('M7');
+const displayedSymbols = computed(() =>
+  lineupMode.value === 'M7' ? BASE_SYMBOLS : EXTENDED_SYMBOLS,
+);
+const activeKeys = ref<string[]>([...displayedSymbols.value]);
 const showFullscreen = ref(false);
 
 const { data, refetch } = useQuery({
@@ -136,7 +143,7 @@ const applyRelativeData = (
 };
 
 const isSymbolKey = (value: string): value is SymbolKey =>
-  (SYMBOLS as readonly string[]).includes(value as SymbolKey);
+  (EXTENDED_SYMBOLS as readonly string[]).includes(value as SymbolKey);
 
 const attachResize = (chart: IChartApi | null, container: HTMLDivElement | null, existing: ResizeObserver | null) => {
   existing?.disconnect();
@@ -176,6 +183,11 @@ watch(
 watch(activeKeys, () => {
   syncLegend(seriesMap);
   syncLegend(fullscreenSeriesMap);
+});
+
+watch(lineupMode, (mode) => {
+  const target = mode === 'M7' ? BASE_SYMBOLS : EXTENDED_SYMBOLS;
+  activeKeys.value = [...target];
 });
 
 const openFullscreen = async () => {
@@ -219,11 +231,13 @@ onBeforeUnmount(() => {
   fullscreenHoverInfo.value = null;
 });
 
-const legendItems = SYMBOLS.map((symbol) => ({
-  key: symbol,
-  label: symbol === '^NDX' ? 'NDX' : symbol,
-  color: COLOR_MAP[symbol],
-}));
+const legendItems = computed(() =>
+  displayedSymbols.value.map((symbol) => ({
+    key: symbol,
+    label: symbol === '^NDX' ? 'NDX' : symbol,
+    color: COLOR_MAP[symbol],
+  })),
+);
 
 const attachCrosshair = (
   chart: IChartApi | null,
@@ -241,14 +255,17 @@ const attachCrosshair = (
       typeof param.time === 'string'
         ? param.time
         : new Date((param.time as number) * 1000).toISOString().split('T')[0] || '';
-    const entries = Array.from(map.entries()).map(([symbol, series]) => {
-      const value = param.seriesData.get(series);
-      return {
-        label: symbol === '^NDX' ? 'NDX' : symbol,
-        color: COLOR_MAP[symbol as SymbolKey] ?? '#fff',
-        value: extractValue(value),
-      };
-    });
+    const visible = new Set(activeKeys.value);
+    const entries = Array.from(map.entries())
+      .filter(([symbol]) => visible.has(symbol))
+      .map(([symbol, series]) => {
+        const value = param.seriesData.get(series);
+        return {
+          label: symbol === '^NDX' ? 'NDX' : symbol,
+          color: COLOR_MAP[symbol as SymbolKey] ?? '#fff',
+          value: extractValue(value),
+        };
+      });
     hoverTarget.value = { time, entries, position: { x: param.point.x, y: param.point.y } };
   };
   if (type === 'main') {
@@ -272,6 +289,24 @@ const attachCrosshair = (
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">Mag 7 Line Performance</div>      </div>
       <div class="flex items-center gap-3">
+        <div class="flex bg-white/10 rounded-full overflow-hidden text-xs font-medium text-white">
+          <button
+            type="button"
+            class="px-3 py-1 transition-colors"
+            :class="lineupMode === 'M7' ? 'bg-accentCyan text-black' : 'text-white/70'"
+            @click="lineupMode = 'M7'"
+          >
+            M7
+          </button>
+          <button
+            type="button"
+            class="px-3 py-1 transition-colors"
+            :class="lineupMode === 'M9' ? 'bg-accentCyan text-black' : 'text-white/70'"
+            @click="lineupMode = 'M9'"
+          >
+            M9
+          </button>
+        </div>
         <TimeRangeSelector v-model="rangeKey" :options="['1W', '1M', '3M', 'YTD', '1Y']" />
         <button class="px-3 py-1 border border-white/20 rounded text-textMuted hover:text-white" @click="openFullscreen">
           Fullscreen
