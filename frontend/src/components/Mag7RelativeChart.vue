@@ -69,7 +69,7 @@ const transformedData = computed(() => {
   if (!data.value) return null;
   return data.value.map((series) => {
     let points = series.points;
-    if (rangeKey.value === '5Y') {
+    if (rangeKey.value === '5Y' || rangeKey.value === '1Y') {
       points = downsampleWeekly(points);
     }
     return { ...series, points };
