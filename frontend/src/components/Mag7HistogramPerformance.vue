@@ -23,7 +23,27 @@ const SYMBOL_LABELS: Record<SymbolKey, string> = {
 };
 const isTrackedSymbol = (value: string): value is SymbolKey =>
   (EXTENDED_SYMBOLS as readonly string[]).includes(value as SymbolKey);
-const rangeOptions = ['1W', '1M', '3M', 'YTD', '1Y'];
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const downsampleWeekly = (points: { time: string; value: number }[]) => {
+  if (!points.length) return points;
+  const result: typeof points = [];
+  let lastSampleTime: number | null = null;
+  points.forEach((point) => {
+    const current = new Date(point.time).getTime();
+    if (Number.isNaN(current)) {
+      result.push(point);
+      return;
+    }
+    if (lastSampleTime === null || current - lastSampleTime >= 7 * MS_PER_DAY) {
+      result.push(point);
+      lastSampleTime = current;
+    } else {
+      result[result.length - 1] = point;
+    }
+  });
+  return result;
+};
+const rangeOptions = ['1W', '1M', '3M', 'YTD', '1Y', '5Y'];
 
 const rangeKey = ref('1W');
 const lineupMode = ref<'M7' | 'M9'>('M7');
@@ -51,6 +71,8 @@ const seriesData = computed(() => {
       let points = series.points;
       if (rangeKey.value === 'YTD') {
         points = points.filter((point) => new Date(point.time) >= cutoff);
+      } else if (rangeKey.value === '5Y') {
+        points = downsampleWeekly(points);
       }
       if (!points.length) return null;
       const first = points[0];

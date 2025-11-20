@@ -31,6 +31,26 @@ const COLOR_MAP: Record<SymbolKey, string> = {
   AVGO: '#fb7185',
   TSM: '#38bdf8',
 };
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const downsampleWeekly = (points: { time: string; value: number }[]) => {
+  if (!points.length) return points;
+  const result: typeof points = [];
+  let lastSampleTime: number | null = null;
+  points.forEach((point) => {
+    const current = new Date(point.time).getTime();
+    if (Number.isNaN(current)) {
+      result.push(point);
+      return;
+    }
+    if (lastSampleTime === null || current - lastSampleTime >= 7 * MS_PER_DAY) {
+      result.push(point);
+      lastSampleTime = current;
+    } else {
+      result[result.length - 1] = point;
+    }
+  });
+  return result;
+};
 
 const rangeKey = ref('1M');
 const lineupMode = ref<'M7' | 'M9'>('M7');
@@ -43,6 +63,17 @@ const showFullscreen = ref(false);
 const { data, refetch } = useQuery({
   queryKey: computed(() => ['relative', 'mag7', rangeKey.value]),
   queryFn: () => fetchRelativePerformance(SYMBOL_PARAMS, rangeKey.value),
+});
+
+const transformedData = computed(() => {
+  if (!data.value) return null;
+  return data.value.map((series) => {
+    let points = series.points;
+    if (rangeKey.value === '5Y') {
+      points = downsampleWeekly(points);
+    }
+    return { ...series, points };
+  });
 });
 
 watch(rangeKey, () => refetch());
@@ -130,9 +161,10 @@ const applyRelativeData = (
   map: Map<string, LineSeries>,
   hoverTarget: typeof hoverInfo,
   type: 'main' | 'fullscreen',
+  payload: { symbol: string; points: { time: string; value: number }[] }[] | null,
 ) => {
-  if (!chart || !data.value) return;
-  data.value.forEach((seriesData) => {
+  if (!chart || !payload) return;
+  payload.forEach((seriesData) => {
     if (!isSymbolKey(seriesData.symbol)) return;
     const series = ensureSeries(chart, map, seriesData.symbol);
     series?.setData(seriesData.points.map((point) => ({ time: point.time, value: point.value })));
@@ -163,8 +195,9 @@ const syncLegend = (map: Map<string, LineSeries>) => {
 };
 
 watch(
-  () => data.value,
-  async () => {
+  () => transformedData.value,
+  async (seriesPayload) => {
+    if (!seriesPayload) return;
     if (mainContainer.value && !mainChart) {
       await nextTick();
       if (mainContainer.value) {
@@ -172,9 +205,9 @@ watch(
         mainObserver = attachResize(mainChart, mainContainer.value, mainObserver);
       }
     }
-    applyRelativeData(mainChart, seriesMap, hoverInfo, 'main');
+    applyRelativeData(mainChart, seriesMap, hoverInfo, 'main', seriesPayload);
     if (showFullscreen.value && fullscreenChart) {
-      applyRelativeData(fullscreenChart, fullscreenSeriesMap, fullscreenHoverInfo, 'fullscreen');
+      applyRelativeData(fullscreenChart, fullscreenSeriesMap, fullscreenHoverInfo, 'fullscreen', seriesPayload);
     }
   },
   { immediate: true },
@@ -196,7 +229,7 @@ const openFullscreen = async () => {
   if (fullscreenContainer.value) {
     fullscreenChart = initChart(fullscreenContainer.value);
     fullscreenObserver = attachResize(fullscreenChart, fullscreenContainer.value, fullscreenObserver);
-    applyRelativeData(fullscreenChart, fullscreenSeriesMap, fullscreenHoverInfo, 'fullscreen');
+    applyRelativeData(fullscreenChart, fullscreenSeriesMap, fullscreenHoverInfo, 'fullscreen', transformedData.value);
   }
 };
 
@@ -307,7 +340,7 @@ const attachCrosshair = (
             M9
           </button>
         </div>
-        <TimeRangeSelector v-model="rangeKey" :options="['1W', '1M', '3M', 'YTD', '1Y']" />
+        <TimeRangeSelector v-model="rangeKey" :options="['1W', '1M', '3M', 'YTD', '1Y', '5Y']" />
         <button class="px-3 py-1 border border-white/20 rounded text-textMuted hover:text-white" @click="openFullscreen">
           Fullscreen
         </button>
