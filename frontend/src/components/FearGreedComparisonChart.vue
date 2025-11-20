@@ -13,7 +13,7 @@ import {
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import FullscreenModal from './FullscreenModal.vue';
-import { fetchFearGreedComparison } from '../services/api';
+import { fetchFearGreedComparison, fetchMarketSummary } from '../services/api';
 
 type LineSeries = ISeriesApi<'Line'>;
 
@@ -24,6 +24,12 @@ const showFullscreen = ref(false);
 const { data, refetch } = useQuery({
   queryKey: computed(() => ['fear-greed', rangeKey.value]),
   queryFn: () => fetchFearGreedComparison(rangeKey.value),
+});
+
+const { data: vixSummary } = useQuery({
+  queryKey: ['fear-greed', 'vix-summary'],
+  queryFn: () => fetchMarketSummary('sp500'),
+  staleTime: 60_000,
 });
 
 watch(rangeKey, () => refetch());
@@ -388,6 +394,14 @@ const zoneBadges = [
   { text: 'Neutral', color: 'bg-yellow-500/30 text-yellow-200' },
   { text: 'Greed', color: 'bg-emerald-500/30 text-emerald-200' },
 ];
+
+const vixLabel = computed(() => {
+  const value = vixSummary.value?.vix_value;
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value.toFixed(2);
+  }
+  return '--';
+});
 </script>
 
 <template>
@@ -395,7 +409,6 @@ const zoneBadges = [
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">Fear & Greed vs SPY</div>
-        <p class="text-sm text-textMuted">Dual-axis comparison with sentiment zones</p>
       </div>
       <div class="flex items-center gap-3">
         <TimeRangeSelector v-model="rangeKey" :options="rangeOptions" />
@@ -451,6 +464,7 @@ const zoneBadges = [
         <span class="w-4 h-1 bg-slate-300 rounded-full"></span> SPY Close
       </span>
     </div>
+    <div class="text-xs text-red-400">当前 VIX：{{ vixLabel }}</div>
     <FullscreenModal
       :open="showFullscreen"
       title="Fear & Greed vs SPY"
