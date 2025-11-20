@@ -59,7 +59,7 @@ const { data: nasdaqSummary } = useQuery({
       <section class="space-y-4">
         <div class="text-2xl text-accentCyan font-semibold uppercase">NASDAQ 100 Dashboard</div>
         <MarketStatsRow :summary="nasdaqSummary" />
-        <div class="grid gap-6 xl:grid-cols-2">
+        <div class="grid gap-6 xl:grid-cols-[3fr,2fr]">
           <Mag7RelativeChart />
           <Mag7HistogramPerformance />
         </div>
