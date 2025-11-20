@@ -103,13 +103,26 @@ const ensureSeries = (chart: IChartApi | null, type: 'fear' | 'spy'): LineSeries
 };
 
 const tooltipStyle = (position: { x: number; y: number }, container: HTMLElement | null) => {
+  const padding = 12;
+  const offsetX = 70;
+  const offsetY = 15;
+  const containerWidth = container?.clientWidth ?? 0;
   const containerHeight = container?.clientHeight ?? 0;
-  const offset = 12;
-  const minTop = offset;
-  const maxTop = containerHeight ? containerHeight - offset : position.y + offset;
-  const top = Math.min(Math.max(position.y + offset, minTop), maxTop);
+  const tooltipWidth = 220;
+  const tooltipHeight = 140;
+
+  let left = position.x + offsetX;
+  if (containerWidth) {
+    left = Math.min(Math.max(left, padding), containerWidth - tooltipWidth - padding);
+  }
+
+  let top = position.y + offsetY;
+  if (containerHeight) {
+    top = Math.min(Math.max(top, padding), containerHeight - tooltipHeight - padding);
+  }
+
   return {
-    left: `${position.x + 16}px`,
+    left: `${left}px`,
     top: `${top}px`,
   };
 };

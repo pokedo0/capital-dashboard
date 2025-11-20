@@ -64,8 +64,8 @@ const measureHeight = (el: HTMLElement): number => el.getBoundingClientRect().he
 
 const tooltipStyle = (position: { x: number; y: number }, container: HTMLElement | null) => {
   const padding = 12;
-  const offsetX = 24;
-  const offsetY = 12;
+  const offsetX = 70;
+  const offsetY = 15;
   const containerWidth = container?.clientWidth ?? 0;
   const containerHeight = container?.clientHeight ?? 0;
   const tooltipWidth = 220;
