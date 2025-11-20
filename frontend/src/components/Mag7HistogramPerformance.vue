@@ -5,9 +5,11 @@ import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import { fetchRelativePerformance } from '../services/api';
 
-const SYMBOLS = ['NVDA', 'GOOG', 'AMZN', 'AAPL', 'META', 'MSFT', 'TSLA', '^NDX', 'AVGO', 'TSM'] as const;
+const BASE_SYMBOLS = ['NVDA', 'GOOG', 'AMZN', 'AAPL', 'META', 'MSFT', 'TSLA', '^NDX'] as const;
+const EXTENDED_SYMBOLS = [...BASE_SYMBOLS, 'AVGO', 'TSM'] as const;
+type SymbolKey = (typeof EXTENDED_SYMBOLS)[number];
 const BASELINE_SYMBOL = '^NDX';
-const SYMBOL_LABELS: Record<(typeof SYMBOLS)[number], string> = {
+const SYMBOL_LABELS: Record<SymbolKey, string> = {
   '^NDX': 'NDX',
   NVDA: 'NVDA',
   GOOG: 'GOOG',
@@ -19,11 +21,15 @@ const SYMBOL_LABELS: Record<(typeof SYMBOLS)[number], string> = {
   AVGO: 'AVGO',
   TSM: 'TSM',
 };
-const isTrackedSymbol = (value: string): value is (typeof SYMBOLS)[number] =>
-  (SYMBOLS as readonly string[]).includes(value as (typeof SYMBOLS)[number]);
+const isTrackedSymbol = (value: string): value is SymbolKey =>
+  (EXTENDED_SYMBOLS as readonly string[]).includes(value as SymbolKey);
 const rangeOptions = ['1W', '1M', '3M', 'YTD', '1Y'];
 
 const rangeKey = ref('1W');
+const lineupMode = ref<'M7' | 'M9'>('M7');
+const displayedSymbols = computed(() =>
+  lineupMode.value === 'M7' ? BASE_SYMBOLS : EXTENDED_SYMBOLS,
+);
 const chartRef = ref<HTMLDivElement | null>(null);
 let chart: echarts.ECharts | null = null;
 
@@ -31,7 +37,7 @@ const queryRange = computed(() => (rangeKey.value === 'YTD' ? '1Y' : rangeKey.va
 
 const { data, refetch } = useQuery({
   queryKey: computed(() => ['mag7-histogram', rangeKey.value]),
-  queryFn: () => fetchRelativePerformance([...SYMBOLS], queryRange.value),
+  queryFn: () => fetchRelativePerformance([...EXTENDED_SYMBOLS], queryRange.value),
 });
 
 watch(rangeKey, () => refetch());
@@ -39,6 +45,7 @@ watch(rangeKey, () => refetch());
 const seriesData = computed(() => {
   if (!data.value) return [];
   const cutoff = new Date(new Date().getFullYear(), 0, 1);
+  const allowed = new Set(displayedSymbols.value);
   return data.value
     .map((series) => {
       let points = series.points;
@@ -51,13 +58,11 @@ const seriesData = computed(() => {
       if (!first || !last || typeof first.value !== 'number' || typeof last.value !== 'number') {
         return null;
       }
-      if (!isTrackedSymbol(series.symbol)) return null;
+      if (!isTrackedSymbol(series.symbol) || !allowed.has(series.symbol)) return null;
       const change = last.value - first.value;
       return { symbol: series.symbol, change, label: SYMBOL_LABELS[series.symbol] ?? series.symbol };
     })
-    .filter(
-      (item): item is { symbol: (typeof SYMBOLS)[number]; change: number; label: string } => !!item,
-    )
+    .filter((item): item is { symbol: SymbolKey; change: number; label: string } => !!item)
     .sort((a, b) => b.change - a.change);
 });
 
@@ -143,7 +148,27 @@ onBeforeUnmount(() => {
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">Mag 7 Histogram Performance</div>
       </div>
-      <TimeRangeSelector v-model="rangeKey" :options="rangeOptions" />
+      <div class="flex items-center gap-3">
+        <div class="flex bg-white/10 rounded-full overflow-hidden text-xs font-medium text-white">
+          <button
+            type="button"
+            class="px-3 py-1 transition-colors"
+            :class="lineupMode === 'M7' ? 'bg-accentCyan text-black' : 'text-white/70'"
+            @click="lineupMode = 'M7'"
+          >
+            M7
+          </button>
+          <button
+            type="button"
+            class="px-3 py-1 transition-colors"
+            :class="lineupMode === 'M9' ? 'bg-accentCyan text-black' : 'text-white/70'"
+            @click="lineupMode = 'M9'"
+          >
+            M9
+          </button>
+        </div>
+        <TimeRangeSelector v-model="rangeKey" :options="rangeOptions" />
+      </div>
     </div>
     <div ref="chartRef" class="w-full flex-1 min-h-[420px]"></div>
   </div>
