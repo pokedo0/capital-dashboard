@@ -100,7 +100,7 @@ const renderChart = () => {
     xAxis: {
       type: 'category',
       data: payload.map((item) => item.label),
-      axisLabel: { color: '#f8fafc', margin: 10 },
+      axisLabel: { color: '#f8fafc', margin: 10, interval: 0 },
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.2)' } },
     },
     yAxis: {
