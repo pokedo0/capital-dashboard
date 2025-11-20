@@ -46,12 +46,14 @@ def _to_relative_points(series: List[Tuple[date, float]]) -> List[ValuePoint]:
     ]
 
 
-def _load_benchmark(session: Session, start_date: date, end_date: date) -> Tuple[List[ValuePoint], List[ValuePoint]]:
-    ensure_history(session, "^NDX", start_date, end_date)
+def _load_benchmark(
+    session: Session, symbol: str, start_date: date, end_date: date
+) -> Tuple[List[ValuePoint], List[ValuePoint]]:
+    ensure_history(session, symbol, start_date, end_date)
     records = (
         session.exec(
             select(PriceRecord)
-            .where(PriceRecord.symbol == "^NDX")
+            .where(PriceRecord.symbol == symbol)
             .where(PriceRecord.trade_date.between(start_date, end_date))
             .order_by(PriceRecord.trade_date)
         )
@@ -88,13 +90,13 @@ def _fetch_barchart_relative(symbol: str, start_date: date, end_date: date) -> L
 
 
 def get_market_breadth_series(
-    session: Session, breadth_symbols: Sequence[str], range_key: str
+    session: Session, breadth_symbols: Sequence[str], range_key: str, benchmark_symbol: str
 ) -> MarketBreadthResponse:
     if not breadth_symbols:
         raise ValueError("至少选择一个市场宽度指标")
     start = resolve_range_start(range_key)
     end = resolve_range_end()
-    benchmark_percent, benchmark_price = _load_benchmark(session, start, end)
+    benchmark_percent, benchmark_price = _load_benchmark(session, benchmark_symbol, start, end)
     series_payload: List[RelativeSeries] = []
     errors: Dict[str, str] = {}
     for symbol in breadth_symbols:
@@ -111,7 +113,7 @@ def get_market_breadth_series(
         detail = "; ".join(errors.values()) if errors else "无可用数据"
         raise ValueError(f"无法获取 Market Breadth 数据: {detail}")
     return MarketBreadthResponse(
-        benchmark_percent=RelativeSeries(symbol="^NDX", points=benchmark_percent),
+        benchmark_percent=RelativeSeries(symbol=benchmark_symbol, points=benchmark_percent),
         benchmark_price=benchmark_price,
         series=series_payload,
     )

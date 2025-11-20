@@ -13,6 +13,18 @@ import FearGreedComparisonChart from './components/FearGreedComparisonChart.vue'
 import MarketBreadthChart from './components/MarketBreadthChart.vue';
 import { fetchMarketSummary } from './services/api';
 
+const nasdaqBreadthOptions = [
+  { value: '$NDTW', label: 'NDTW - Above 20-Day Average' },
+  { value: '$NDFI', label: 'NDFI - Above 50-Day Average' },
+  { value: '$NDTH', label: 'NDTH - Above 200-Day Average' },
+];
+
+const spBreadthOptions = [
+  { value: '$S5TW', label: 'S&P 500 Above 20-Day Average' },
+  { value: '$S5FI', label: 'S&P 500 Above 50-Day Average' },
+  { value: '$S5TH', label: 'S&P 500 Above 200-Day Average' },
+];
+
 const { data: sp500Summary } = useQuery({
   queryKey: ['market', 'sp500'],
   queryFn: () => fetchMarketSummary('sp500'),
@@ -55,7 +67,24 @@ const { data: nasdaqSummary } = useQuery({
 
       <section class="space-y-4">
         <div class="text-2xl text-accentCyan font-semibold uppercase">Market Breadth Dashboard</div>
-        <MarketBreadthChart />
+        <div class="grid gap-6 xl:grid-cols-2">
+          <MarketBreadthChart
+            title="Nasdaq 100 Stocks Above X-Day Average"
+            :options="nasdaqBreadthOptions"
+            benchmark-symbol="^NDX"
+            benchmark-label="NDX Index"
+            default-symbol="$NDTW"
+            chart-key="nasdaq-breadth"
+          />
+          <MarketBreadthChart
+            title="S&P 500 Stocks Above X-Day Average"
+            :options="spBreadthOptions"
+            benchmark-symbol="^GSPC"
+            benchmark-label="SPX Index"
+            default-symbol="$S5TW"
+            chart-key="spx-breadth"
+          />
+        </div>
       </section>
 
       <section class="space-y-6">

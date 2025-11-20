@@ -220,6 +220,7 @@ def api_fear_greed(
 def api_market_breadth(
     symbols: str = Query("$NDTW", description="Comma separated Barchart breadth symbols"),
     range_key: str = Query("1M", alias="range"),
+    benchmark: str = Query("^NDX", description="Benchmark symbol for comparison"),
     session: Session = Depends(get_session),
 ) -> MarketBreadthResponse:
     requested = [token.strip() for token in symbols.split(",") if token.strip()]
@@ -232,10 +233,14 @@ def api_market_breadth(
             normalized.append(symbol)
     if not normalized:
         raise HTTPException(status_code=400, detail="symbols parameter required")
-    cache_key = ("breadth", ",".join(normalized), range_key.upper())
+    benchmark_symbol = benchmark.strip().upper()
+    if not benchmark_symbol:
+        raise HTTPException(status_code=400, detail="benchmark parameter required")
+    cache_key = ("breadth", ",".join(normalized), range_key.upper(), benchmark_symbol)
     try:
         return breadth_cache.get_or_set(
-            cache_key, lambda: get_market_breadth_series(session, normalized, range_key)
+            cache_key,
+            lambda: get_market_breadth_series(session, normalized, range_key, benchmark_symbol),
         )
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

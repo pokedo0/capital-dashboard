@@ -14,6 +14,7 @@ class Settings(BaseModel):
             "QQQ",
             "^VIX",
             "^NDX",
+            "^GSPC",
             "XLC",
             "XLK",
             "XLF",

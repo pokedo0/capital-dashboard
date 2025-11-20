@@ -80,9 +80,10 @@ export const fetchFearGreedComparison = async (
 export const fetchMarketBreadth = async (
   symbols: string[],
   range = '1M',
+  benchmark = '^NDX',
 ): Promise<MarketBreadthResponse> => {
   const { data } = await api.get<MarketBreadthResponse>('/api/market/breadth', {
-    params: { symbols: symbols.join(','), range },
+    params: { symbols: symbols.join(','), range, benchmark },
   });
   return data;
 };

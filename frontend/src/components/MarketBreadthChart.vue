@@ -12,34 +12,81 @@ import TimeRangeSelector from './TimeRangeSelector.vue';
 import { fetchMarketBreadth } from '../services/api';
 
 type LineSeries = ISeriesApi<'Line'>;
+type OptionItem = { value: string; label: string };
 
-const BREADTH_OPTIONS = [
-  { value: '$NDTW', label: 'NDTW - Above 20-Day Average' },
-  { value: '$NDFI', label: 'NDFI - Above 50-Day Average' },
-  { value: '$NDTH', label: 'NDTH - Above 200-Day Average' },
-] as const;
-type BreadthSymbol = (typeof BREADTH_OPTIONS)[number]['value'];
-
-const COLOR_MAP: Record<string, string> = {
-  '^NDX': '#f04949',
-  '$NDTW': '#f04949',
-  '$NDFI': '#f04949',
-  '$NDTH': '#f04949',
-};
+const FALLBACK_RANGES = ['1W', '1M', '3M', 'YTD', '1Y', '5Y'];
+const BREADTH_COLOR = '#f04949';
 const PRICE_COLOR = '#bdc3c7';
 
-const rangeKey = ref('1M');
-const selectedSymbol = ref<BreadthSymbol>(BREADTH_OPTIONS[0].value);
-const selectedOption = computed(
-  () => BREADTH_OPTIONS.find((option) => option.value === selectedSymbol.value) ?? BREADTH_OPTIONS[0],
-);
+const props = defineProps<{
+  title: string;
+  options: OptionItem[];
+  benchmarkSymbol: string;
+  benchmarkLabel: string;
+  defaultSymbol?: string;
+  chartKey?: string;
+  rangeOptions?: string[];
+}>();
 
-const { data, refetch } = useQuery({
-  queryKey: computed(() => ['market-breadth', rangeKey.value, selectedSymbol.value]),
-  queryFn: () => fetchMarketBreadth([selectedSymbol.value], rangeKey.value),
+const pickDefaultSymbol = (options: OptionItem[]): string => {
+  if (props.defaultSymbol && options.some((option) => option.value === props.defaultSymbol)) {
+    return props.defaultSymbol;
+  }
+  return options[0]?.value ?? '';
+};
+
+const resolvedRangeOptions = computed(() => props.rangeOptions ?? FALLBACK_RANGES);
+const pickDefaultRange = (options: string[]): string => (options.includes('1M') ? '1M' : options[0] ?? '1M');
+
+const rangeKey = ref(pickDefaultRange(resolvedRangeOptions.value));
+watch(resolvedRangeOptions, (next) => {
+  if (!next.length) {
+    rangeKey.value = '1M';
+  } else if (!next.includes(rangeKey.value)) {
+    rangeKey.value = pickDefaultRange(next);
+  }
 });
 
-watch([rangeKey, selectedSymbol], () => refetch());
+const selectedSymbol = ref(pickDefaultSymbol(props.options));
+
+watch(
+  [() => props.options, () => props.defaultSymbol],
+  () => {
+    const nextOptions = props.options;
+    if (!nextOptions.length) {
+      selectedSymbol.value = '';
+      return;
+    }
+    if (!nextOptions.some((option) => option.value === selectedSymbol.value)) {
+      selectedSymbol.value = pickDefaultSymbol(nextOptions);
+    }
+  },
+  { immediate: false },
+);
+
+const selectedOption = computed(
+  () => props.options.find((option) => option.value === selectedSymbol.value) ?? { value: '', label: '--' },
+);
+
+const isQueryEnabled = computed(() => Boolean(selectedSymbol.value));
+
+const { data, refetch } = useQuery({
+  queryKey: computed(() => [
+    'market-breadth',
+    props.chartKey ?? props.title,
+    props.benchmarkSymbol,
+    selectedSymbol.value,
+    rangeKey.value,
+  ]),
+  queryFn: () => fetchMarketBreadth([selectedSymbol.value], rangeKey.value, props.benchmarkSymbol),
+  enabled: isQueryEnabled,
+});
+
+watch([rangeKey, selectedSymbol, () => props.benchmarkSymbol], () => {
+  if (isQueryEnabled.value) {
+    refetch();
+  }
+});
 
 const container = ref<HTMLDivElement | null>(null);
 let chart: IChartApi | null = null;
@@ -109,13 +156,13 @@ const ensureBreadthSeries = () => {
       chart.removeSeries(breadthSeries);
     }
     breadthSeries = chart.addSeries(LineSeriesDefinition, {
-      color: COLOR_MAP[selectedSymbol.value] ?? '#ffffff',
+      color: BREADTH_COLOR,
       lineWidth: 2,
       priceScaleId: 'left',
     });
     breadthSymbol = selectedSymbol.value;
   } else {
-    breadthSeries.applyOptions({ color: COLOR_MAP[selectedSymbol.value] ?? '#ffffff' });
+    breadthSeries.applyOptions({ color: BREADTH_COLOR });
   }
   return breadthSeries;
 };
@@ -134,6 +181,7 @@ const ensurePriceSeries = () => {
 const applyData = () => {
   if (!chart || !data.value) return;
   const breadth = data.value.series[0];
+  if (!breadth) return;
   const breadthLine = ensureBreadthSeries();
   breadthLine?.setData(
     (breadth?.points ?? []).map((point) => ({ time: point.time, value: point.value })),
@@ -185,7 +233,7 @@ const attachCrosshair = () => {
       const breadthValue = param.seriesData.get(breadthSeries);
       entries.push({
         label: selectedOption.value.label,
-        color: COLOR_MAP[selectedSymbol.value] ?? '#ffffff',
+        color: BREADTH_COLOR,
         value: extractValue(breadthValue),
         unit: 'percent',
       });
@@ -193,7 +241,7 @@ const attachCrosshair = () => {
     if (priceSeries) {
       const priceValue = param.seriesData.get(priceSeries);
       entries.push({
-        label: 'NDX Index',
+        label: props.benchmarkLabel,
         color: PRICE_COLOR,
         value: extractValue(priceValue),
         unit: 'index',
@@ -240,19 +288,19 @@ onBeforeUnmount(() => {
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">
-          Nasdaq 100 Stocks Above X-Day Average
+          {{ props.title }}
         </div>
         <div class="flex items-center gap-3 text-xs text-textMuted mt-1">
           <span class="flex items-center gap-2">
             <span
               class="w-4 h-1 rounded-full"
-              :style="{ backgroundColor: COLOR_MAP[selectedSymbol] }"
+              :style="{ backgroundColor: BREADTH_COLOR }"
             ></span>
             <span>{{ selectedOption.label }} (Left Axis)</span>
           </span>
           <span class="flex items-center gap-2">
             <span class="w-4 h-1 rounded-full" :style="{ backgroundColor: PRICE_COLOR }"></span>
-            <span>NDX Index (Right Axis)</span>
+            <span>{{ props.benchmarkLabel }} (Right Axis)</span>
           </span>
         </div>
       </div>
@@ -261,14 +309,15 @@ onBeforeUnmount(() => {
           Breadth Indicator
           <select
             v-model="selectedSymbol"
+            :disabled="!props.options.length"
             class="bg-black/40 border border-white/20 rounded px-2 py-1 text-white text-sm focus:outline-none"
           >
-            <option v-for="option in BREADTH_OPTIONS" :key="option.value" :value="option.value">
+            <option v-for="option in props.options" :key="option.value" :value="option.value">
               {{ option.label }}
             </option>
           </select>
         </label>
-        <TimeRangeSelector v-model="rangeKey" :options="['1W', '1M', '3M', 'YTD', '1Y', '5Y']" />
+        <TimeRangeSelector v-model="rangeKey" :options="resolvedRangeOptions" />
       </div>
     </div>
     <div class="relative flex-1 w-full min-h-[360px]">
