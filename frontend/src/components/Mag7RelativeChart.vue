@@ -298,7 +298,8 @@ const attachCrosshair = (
           color: COLOR_MAP[symbol as SymbolKey] ?? '#fff',
           value: extractValue(value),
         };
-      });
+      })
+      .sort((a, b) => (b.value ?? Number.NEGATIVE_INFINITY) - (a.value ?? Number.NEGATIVE_INFINITY));
     hoverTarget.value = { time, entries, position: { x: param.point.x, y: param.point.y } };
   };
   if (type === 'main') {
