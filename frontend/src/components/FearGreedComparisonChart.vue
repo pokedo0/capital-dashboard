@@ -225,6 +225,7 @@ const applyZoneLines = (series: LineSeries | null, store: IPriceLine[]) => {
     lineWidth: 2,
     lineStyle: LineStyle.Dashed,
     axisLabelVisible: true,
+    axisLabelColor: DIP_BUY_LINE.color,
     title: DIP_BUY_LINE.label,
   });
   store.push(dipLine);
