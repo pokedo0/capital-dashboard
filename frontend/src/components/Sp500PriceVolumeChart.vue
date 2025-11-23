@@ -387,7 +387,7 @@ const attachCrosshair = (
         <p class="text-sm text-textMuted">Index price with 30-day average and volume overlay</p>
       </div>
       <div class="flex items-center gap-3">
-        <TimeRangeSelector v-model="rangeKey" />
+        <TimeRangeSelector v-model="rangeKey" :options="['1M', '3M', 'YTD', '1Y', '5Y']" />
         <button
           class="h-10 w-10 rounded-full text-textMuted hover:text-white flex items-center justify-center hover:bg-white/10 transition-colors"
           @click="openFullscreen"
