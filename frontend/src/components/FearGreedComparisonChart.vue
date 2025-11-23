@@ -42,8 +42,10 @@ const mainOverlay = ref<HTMLDivElement | null>(null);
 const fullscreenOverlay = ref<HTMLDivElement | null>(null);
 const mainGreedZone = ref<HTMLDivElement | null>(null);
 const mainExtremeZone = ref<HTMLDivElement | null>(null);
+const mainDipZone = ref<HTMLDivElement | null>(null);
 const fullscreenGreedZone = ref<HTMLDivElement | null>(null);
 const fullscreenExtremeZone = ref<HTMLDivElement | null>(null);
+const fullscreenDipZone = ref<HTMLDivElement | null>(null);
 let mainChart: IChartApi | null = null;
 let fullscreenChart: IChartApi | null = null;
 let mainObserver: ResizeObserver | null = null;
@@ -136,6 +138,7 @@ const updateFearZones = (scope: 'main' | 'fullscreen') => {
     (isMain ? mainContainer.value : fullscreenContainer.value);
   const greedEl = isMain ? mainGreedZone.value : fullscreenGreedZone.value;
   const fearEl = isMain ? mainExtremeZone.value : fullscreenExtremeZone.value;
+  const dipEl = isMain ? mainDipZone.value : fullscreenDipZone.value;
   if (!series || !overlay) return;
   const overlayHeight = overlay.clientHeight;
   if (!overlayHeight) return;
@@ -160,6 +163,17 @@ const updateFearZones = (scope: 'main' | 'fullscreen') => {
       fearEl.style.opacity = '1';
       fearEl.style.top = `${top}px`;
       fearEl.style.height = `${Math.max(overlayHeight - top, 0)}px`;
+    }
+  }
+  const dipCoord = series.priceToCoordinate(DIP_BUY_LINE.value);
+  if (dipEl) {
+    if (typeof dipCoord !== 'number') {
+      dipEl.style.opacity = '0';
+    } else {
+      const top = clamp(dipCoord);
+      dipEl.style.opacity = '1';
+      dipEl.style.top = `${top}px`;
+      dipEl.style.height = `${Math.max(overlayHeight - top, 0)}px`;
     }
   }
 };
@@ -447,6 +461,11 @@ const indexLabel = computed(() => {
           class="absolute inset-x-0 bg-red-400/10 transition-[height] duration-300 ease-out"
           style="opacity: 0"
         ></div>
+        <div
+          ref="mainDipZone"
+          class="absolute inset-x-0 bg-[#14188f]/20 transition-[height] duration-300 ease-out"
+          style="opacity: 0"
+        ></div>
       </div>
       <div
         v-if="mainHover"
@@ -488,6 +507,11 @@ const indexLabel = computed(() => {
           <div
             ref="fullscreenExtremeZone"
             class="absolute inset-x-0 bg-red-400/10 transition-[height] duration-300 ease-out"
+            style="opacity: 0"
+          ></div>
+          <div
+            ref="fullscreenDipZone"
+            class="absolute inset-x-0 bg-[#14188f]/20 transition-[height] duration-300 ease-out"
             style="opacity: 0"
           ></div>
         </div>
