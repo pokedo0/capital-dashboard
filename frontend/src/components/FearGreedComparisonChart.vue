@@ -31,9 +31,10 @@ watch(rangeKey, () => refetch());
 const FEAR_ZONES = [
   { value: 25, label: 'Extreme Fear', color: '#ef4444' },
   { value: 45, label: 'Fear', color: '#636e72' },
-  { value: 55, label: 'Neutral', color: '#636e72' },
-  { value: 75, label: 'Greed', color: '#22c55e' },
+  { value: 55, label: 'Greed', color: '#636e72' },
+  { value: 75, label: 'Extreme Greed', color: '#22c55e' },
 ];
+const DIP_BUY_LINE = { value: 10, label: 'Dip Buy', color: '#14188f' } as const;
 
 const mainContainer = ref<HTMLDivElement | null>(null);
 const fullscreenContainer = ref<HTMLDivElement | null>(null);
@@ -204,6 +205,15 @@ const applyZoneLines = (series: LineSeries | null, store: IPriceLine[]) => {
     });
     store.push(line);
   });
+  const dipLine = series.createPriceLine({
+    price: DIP_BUY_LINE.value,
+    color: DIP_BUY_LINE.color,
+    lineWidth: 2,
+    lineStyle: LineStyle.Dashed,
+    axisLabelVisible: true,
+    title: DIP_BUY_LINE.label,
+  });
+  store.push(dipLine);
 };
 
 const extractValue = (point: unknown): number | undefined => {
