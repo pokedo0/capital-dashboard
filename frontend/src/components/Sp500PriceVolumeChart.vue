@@ -19,7 +19,6 @@ import LegendToggle from './LegendToggle.vue';
 import { fetchOhlcv } from '../services/api';
 import type { OHLCVPoint } from '../types/api';
 import FullscreenModal from './FullscreenModal.vue';
-import { useFullscreen } from '../composables/useFullscreen';
 
 type LineSeries = ISeriesApi<'Line'>;
 type HistogramSeries = ISeriesApi<'Histogram'>;
@@ -46,8 +45,6 @@ watch(rangeKey, () => refetch());
 
 const mainContainer = ref<HTMLDivElement | null>(null);
 const fullscreenContainer = ref<HTMLDivElement | null>(null);
-const fullscreenShell = ref<HTMLDivElement | null>(null);
-const { request: enterFullscreen, exit: leaveFullscreen } = useFullscreen(fullscreenShell);
 const mainBundle = ref<ChartBundle | null>(null);
 const fullscreenBundle = ref<ChartBundle | null>(null);
 const hoverInfo = ref<
@@ -296,21 +293,18 @@ const openFullscreen = async () => {
       );
     }
   }
-  await enterFullscreen();
 };
 
 watch(showFullscreen, (open) => {
   if (!open) {
     destroyBundle(fullscreenBundle.value);
     fullscreenBundle.value = null;
-    leaveFullscreen();
   }
 });
 
 onBeforeUnmount(() => {
   destroyBundle(mainBundle.value);
   destroyBundle(fullscreenBundle.value);
-  leaveFullscreen();
 });
 
 const legendItems = [
@@ -394,7 +388,13 @@ const attachCrosshair = (
       </div>
       <div class="flex items-center gap-3">
         <TimeRangeSelector v-model="rangeKey" />
-        <button class="px-3 py-1 border border-white/20 rounded text-textMuted hover:text-white" @click="openFullscreen">
+        <button
+          class="px-3 py-1 border border-white/20 rounded text-textMuted hover:text-white flex items-center gap-2"
+          @click="openFullscreen"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 9V5h4M20 9V5h-4M4 15v4h4m12-4v4h-4" />
+          </svg>
           Fullscreen
         </button>
       </div>
@@ -423,7 +423,7 @@ const attachCrosshair = (
     </div>
     <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
     <FullscreenModal :open="showFullscreen" title="S&P500 Price & Volume" @close="showFullscreen = false">
-      <div ref="fullscreenShell" class="flex flex-col gap-4 w-full h-full">
+      <div class="flex flex-col gap-4 w-full h-full">
         <div class="relative flex-1 min-h-[420px]">
           <div ref="fullscreenContainer" class="absolute inset-0"></div>
           <div
