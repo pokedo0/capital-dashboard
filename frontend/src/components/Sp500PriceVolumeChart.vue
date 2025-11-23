@@ -16,9 +16,10 @@ import {
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import LegendToggle from './LegendToggle.vue';
-import FullscreenModal from './FullscreenModal.vue';
 import { fetchOhlcv } from '../services/api';
 import type { OHLCVPoint } from '../types/api';
+import FullscreenModal from './FullscreenModal.vue';
+import { useFullscreen } from '../composables/useFullscreen';
 
 type LineSeries = ISeriesApi<'Line'>;
 type HistogramSeries = ISeriesApi<'Histogram'>;
@@ -31,9 +32,9 @@ interface ChartBundle {
   observer: ResizeObserver;
 }
 
+const activeKeys = ref(['price', 'ma', 'volume']);
 const rangeKey = ref('1Y');
 const showFullscreen = ref(false);
-const activeKeys = ref(['price', 'ma', 'volume']);
 
 const { data, refetch } = useQuery({
   queryKey: computed(() => ['ohlcv', 'SPY', rangeKey.value]),
@@ -45,6 +46,8 @@ watch(rangeKey, () => refetch());
 
 const mainContainer = ref<HTMLDivElement | null>(null);
 const fullscreenContainer = ref<HTMLDivElement | null>(null);
+const fullscreenShell = ref<HTMLDivElement | null>(null);
+const { request: enterFullscreen, exit: leaveFullscreen } = useFullscreen(fullscreenShell);
 const mainBundle = ref<ChartBundle | null>(null);
 const fullscreenBundle = ref<ChartBundle | null>(null);
 const hoverInfo = ref<
@@ -293,18 +296,21 @@ const openFullscreen = async () => {
       );
     }
   }
+  await enterFullscreen();
 };
 
 watch(showFullscreen, (open) => {
   if (!open) {
     destroyBundle(fullscreenBundle.value);
     fullscreenBundle.value = null;
+    leaveFullscreen();
   }
 });
 
 onBeforeUnmount(() => {
   destroyBundle(mainBundle.value);
   destroyBundle(fullscreenBundle.value);
+  leaveFullscreen();
 });
 
 const legendItems = [
@@ -417,7 +423,7 @@ const attachCrosshair = (
     </div>
     <LegendToggle v-model:activeKeys="activeKeys" :items="legendItems" />
     <FullscreenModal :open="showFullscreen" title="S&P500 Price & Volume" @close="showFullscreen = false">
-      <div class="flex flex-col gap-4 w-full h-full">
+      <div ref="fullscreenShell" class="flex flex-col gap-4 w-full h-full">
         <div class="relative flex-1 min-h-[420px]">
           <div ref="fullscreenContainer" class="absolute inset-0"></div>
           <div
