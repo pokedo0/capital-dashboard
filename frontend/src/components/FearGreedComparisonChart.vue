@@ -512,7 +512,7 @@ const indexLabel = computed(() => {
       title="Fear & Greed vs SPY"
       @close="showFullscreen = false"
     >
-      <div class="relative flex-1 min-h-[440px]">
+      <div class="relative flex-1 min-h-[70vh]">
         <div ref="fullscreenContainer" class="absolute inset-0"></div>
         <div ref="fullscreenOverlay" class="pointer-events-none absolute inset-0 z-10">
           <div
