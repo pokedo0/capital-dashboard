@@ -300,8 +300,18 @@ const applyData = (
   fearSeries.setData(normalize(payload.index));
   spySeries.setData(normalize(payload.spy));
   chart.timeScale().fitContent();
-  chart.priceScale('left').applyOptions({ autoScale: true, mode: PriceScaleMode.Normal });
-  chart.priceScale('right').applyOptions({ autoScale: true, mode: PriceScaleMode.Normal });
+  chart.priceScale('left').applyOptions({
+    autoScale: true,
+    mode: PriceScaleMode.Normal,
+    visible: true,
+    borderVisible: false,
+  });
+  chart.priceScale('right').applyOptions({
+    autoScale: true,
+    mode: PriceScaleMode.Normal,
+    visible: true,
+    borderVisible: false,
+  });
   applyZoneLines(fearSeries, lines);
   attachCrosshair(chart, fearSeries, spySeries, hoverRef, store);
   scheduleZoneUpdate(store);
