@@ -368,19 +368,6 @@ onBeforeUnmount(() => {
         <div class="text-xl text-accentCyan font-semibold uppercase">
           {{ props.title }}
         </div>
-        <div class="flex items-center gap-3 text-xs text-textMuted mt-1">
-          <span class="flex items-center gap-2">
-            <span
-              class="w-4 h-1 rounded-full"
-              :style="{ backgroundColor: BREADTH_COLOR }"
-            ></span>
-            <span>{{ selectedOption.label }} (Left Axis)</span>
-          </span>
-          <span class="flex items-center gap-2">
-            <span class="w-4 h-1 rounded-full" :style="{ backgroundColor: PRICE_COLOR }"></span>
-            <span>{{ props.benchmarkLabel }} (Right Axis)</span>
-          </span>
-        </div>
       </div>
       <div class="flex flex-wrap items-center gap-4">
         <label class="text-sm uppercase tracking-wide text-textMuted flex flex-col gap-1">
@@ -427,6 +414,19 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
+    <div class="text-xs text-textMuted flex flex-wrap items-center gap-4">
+      <span class="flex items-center gap-2">
+        <span
+          class="w-4 h-1 rounded-full"
+          :style="{ backgroundColor: BREADTH_COLOR }"
+        ></span>
+        <span>{{ selectedOption.label }} (Left Axis)</span>
+      </span>
+      <span class="flex items-center gap-2">
+        <span class="w-4 h-1 rounded-full" :style="{ backgroundColor: PRICE_COLOR }"></span>
+        <span>{{ props.benchmarkLabel }} (Right Axis)</span>
+      </span>
+    </div>
     <FullscreenModal :open="showFullscreen" :title="props.title" @close="showFullscreen = false">
       <div class="relative flex-1 min-h-[70vh] w-full">
         <div ref="fullscreenContainer" class="absolute inset-0"></div>
@@ -448,6 +448,19 @@ onBeforeUnmount(() => {
             </span>
           </div>
         </div>
+      </div>
+      <div class="text-xs text-textMuted flex flex-wrap items-center gap-4 px-4 pb-4">
+        <span class="flex items-center gap-2">
+          <span
+            class="w-4 h-1 rounded-full"
+            :style="{ backgroundColor: BREADTH_COLOR }"
+          ></span>
+          <span>{{ selectedOption.label }} (Left Axis)</span>
+        </span>
+        <span class="flex items-center gap-2">
+          <span class="w-4 h-1 rounded-full" :style="{ backgroundColor: PRICE_COLOR }"></span>
+          <span>{{ props.benchmarkLabel }} (Right Axis)</span>
+        </span>
       </div>
     </FullscreenModal>
   </div>
