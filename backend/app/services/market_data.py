@@ -3,12 +3,17 @@ from __future__ import annotations
 from datetime import date, datetime
 import json
 import logging
+import os
 from typing import Dict, List, Sequence, Tuple
 from urllib.error import URLError
 from urllib.request import urlopen, Request
 
 import pandas as pd
-import yfinance as yf
+
+# 强制关闭 yfinance 的 curl_cffi，避免环境中 curl/openssl 导致 TLS 异常
+os.environ.setdefault("YF_NO_CURL", "1")
+os.environ.setdefault("YF_ENABLE_CURL", "0")
+import yfinance as yf  # noqa: E402
 from sqlalchemy import func
 from sqlmodel import Session, select
 
@@ -47,7 +52,7 @@ FEAR_GREED_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata
 SP500_CONSTITUENTS_URL = (
     "https://jcoffi.github.io/index-constituents/constituents-sp500.csv"
 )
-SP500_CHUNK_SIZE = 50
+SP500_CHUNK_SIZE = 500
 
 
 def ensure_history(session: Session, symbol: str, start: date, end: date) -> None:

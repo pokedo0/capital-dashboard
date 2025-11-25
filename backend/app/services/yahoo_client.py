@@ -2,10 +2,15 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 import logging
+import os
 from typing import List, Optional
 
 import pandas as pd
-import yfinance as yf
+
+# 强制关闭 yfinance 的 curl_cffi，避免环境中 curl/openssl 导致 TLS 异常
+os.environ.setdefault("YF_NO_CURL", "1")
+os.environ.setdefault("YF_ENABLE_CURL", "0")
+import yfinance as yf  # noqa: E402
 from sqlmodel import Session
 
 from ..models.price import PriceRecord
