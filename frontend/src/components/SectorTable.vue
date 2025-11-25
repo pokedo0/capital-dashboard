@@ -5,7 +5,6 @@ import { fetchSectorSummary } from '../services/api';
 const { data } = useQuery({
   queryKey: ['sectors'],
   queryFn: () => fetchSectorSummary(),
-  refetchInterval: 60_000,
 });
 
 const formatNumber = (value: number) => value.toFixed(2);
