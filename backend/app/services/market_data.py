@@ -49,10 +49,8 @@ SECTOR_LABELS: Dict[str, str] = {
 }
 
 FEAR_GREED_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
-SP500_CONSTITUENTS_URL = (
-    "https://jcoffi.github.io/index-constituents/constituents-sp500.csv"
-)
-SP500_CHUNK_SIZE = 500
+SP500_CONSTITUENTS_URL = "https://jcoffi.github.io/index-constituents/constituents-sp500.csv"
+NASDAQ100_CONSTITUENTS_URL = "https://jcoffi.github.io/index-constituents/constituents-nasdaq100.csv"
 
 
 def ensure_history(session: Session, symbol: str, start: date, end: date) -> None:
@@ -305,17 +303,17 @@ def get_fear_greed_comparison(session: Session, range_key: str) -> FearGreedResp
     return FearGreedResponse(index=index_points, spy=spy_points)
 
 
-def _load_sp500_constituents() -> List[str]:
-    logger.info("Loading S&P 500 constituents from %s", SP500_CONSTITUENTS_URL)
+def _load_constituents(url: str, label: str) -> List[str]:
+    logger.info("Loading %s constituents from %s", label, url)
     try:
-        request = Request(SP500_CONSTITUENTS_URL, headers={"User-Agent": "Mozilla/5.0"})
+        request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urlopen(request, timeout=10) as response:
             df = pd.read_csv(response)
     except Exception as exc:  # pragma: no cover - network/runtime issues
-        logger.warning("Failed to load S&P 500 constituents: %s", exc)
+        logger.warning("Failed to load %s constituents: %s", label, exc)
         return []
     if "Symbol" not in df.columns:
-        logger.warning("S&P 500 constituents CSV missing Symbol column")
+        logger.warning("%s constituents CSV missing Symbol column", label)
         return []
     normalized: List[str] = []
     for raw in df["Symbol"].tolist():
@@ -324,52 +322,34 @@ def _load_sp500_constituents() -> List[str]:
             continue
         normalized.append(symbol.replace(".", "-"))
     unique = list(dict.fromkeys(normalized))
-    logger.info("Loaded %d S&P 500 tickers for breadth calculation", len(unique))
+    logger.info("Loaded %d %s tickers for breadth calculation", len(unique), label)
     return unique
 
 
-def _chunked(items: List[str], size: int):
-    for start in range(0, len(items), size):
-        yield items[start : start + size]
-
-
-def _download_sp500_prices(symbols: List[str]) -> pd.DataFrame:
+def _download_prices(symbols: List[str], label: str) -> pd.DataFrame:
     if not symbols:
         return pd.DataFrame()
-    frames: List[pd.DataFrame] = []
-    total_chunks = (len(symbols) + SP500_CHUNK_SIZE - 1) // SP500_CHUNK_SIZE
-    for index, chunk in enumerate(_chunked(symbols, SP500_CHUNK_SIZE), start=1):
-        logger.info(
-            "Downloading S&P 500 prices chunk %d/%d (%d symbols)",
-            index,
-            total_chunks,
-            len(chunk),
+    logger.info("Downloading %s prices (%d symbols)", label, len(symbols))
+    try:
+        df = yf.download(
+            symbols,
+            period="5d",
+            group_by="ticker",
+            progress=False,
+            threads=True,
+            auto_adjust=False,
+            actions=False,
         )
-        try:
-            df = yf.download(
-                chunk,
-                period="5d",
-                group_by="ticker",
-                progress=False,
-                threads=True,
-                auto_adjust=False,
-                actions=False,
-            )
-        except Exception as exc:  # pragma: no cover - network/runtime issues
-            logger.warning("Chunk %d download failed: %s", index, exc)
-            continue
-        if df.empty:
-            logger.warning("Chunk %d/%d returned empty price frame", index, total_chunks)
-            continue
-        if not isinstance(df.columns, pd.MultiIndex):
-            df = pd.concat({chunk[0]: df}, axis=1)
-        frames.append(df)
-    if not frames:
-        logger.warning("No price data downloaded for S&P 500 constituents")
+    except Exception as exc:  # pragma: no cover - network/runtime issues
+        logger.warning("Failed to download %s prices: %s", label, exc)
         return pd.DataFrame()
-    merged = pd.concat(frames, axis=1)
-    logger.info("Completed downloading prices for %d symbols", len(symbols))
-    return merged
+    if df.empty:
+        logger.warning("%s price download returned empty frame", label)
+        return pd.DataFrame()
+    if not isinstance(df.columns, pd.MultiIndex):
+        df = pd.concat({symbols[0]: df}, axis=1)
+    logger.info("Completed downloading %s prices", label)
+    return df
 
 
 def _extract_closes(price_frame: pd.DataFrame, symbol: str) -> pd.Series | None:
@@ -389,7 +369,7 @@ def _extract_closes(price_frame: pd.DataFrame, symbol: str) -> pd.Series | None:
     return closes.dropna()
 
 
-def _calculate_sp500_breadth(price_frame: pd.DataFrame, symbols: List[str]) -> Tuple[float | None, float | None]:
+def _calculate_breadth(price_frame: pd.DataFrame, symbols: List[str]) -> Tuple[float | None, float | None]:
     up = down = flat = missing = 0
     for symbol in symbols:
         closes = _extract_closes(price_frame, symbol)
@@ -410,7 +390,7 @@ def _calculate_sp500_breadth(price_frame: pd.DataFrame, symbols: List[str]) -> T
             flat += 1
     total = up + down + flat
     logger.info(
-        "S&P 500 breadth summary: up=%d down=%d flat=%d missing=%d (tracked=%d)",
+        "Breadth summary: up=%d down=%d flat=%d missing=%d (tracked=%d)",
         up,
         down,
         flat,
@@ -422,14 +402,14 @@ def _calculate_sp500_breadth(price_frame: pd.DataFrame, symbols: List[str]) -> T
     return (up / total * 100, down / total * 100)
 
 
-def _sp500_advance_decline() -> Tuple[float | None, float | None]:
-    symbols = _load_sp500_constituents()
+def _advance_decline_from_url(url: str, label: str) -> Tuple[float | None, float | None]:
+    symbols = _load_constituents(url, label)
     if not symbols:
         return None, None
-    price_frame = _download_sp500_prices(symbols)
+    price_frame = _download_prices(symbols, label)
     if price_frame.empty:
         return None, None
-    return _calculate_sp500_breadth(price_frame, symbols)
+    return _calculate_breadth(price_frame, symbols)
 
 
 def _latest_market_rows(session: Session, symbol: str) -> List[PriceRecord] | None:
@@ -457,7 +437,14 @@ def get_market_summary(session: Session, market: str) -> MarketSummary:
     decliners_pct: float | None = None
     if market_key == "sp500":
         logger.info("Calculating S&P 500 advance/decline percentages")
-        advancers_pct, decliners_pct = _sp500_advance_decline()
+        advancers_pct, decliners_pct = _advance_decline_from_url(
+            SP500_CONSTITUENTS_URL, "S&P 500"
+        )
+    elif market_key == "nasdaq":
+        logger.info("Calculating Nasdaq 100 advance/decline percentages")
+        advancers_pct, decliners_pct = _advance_decline_from_url(
+            NASDAQ100_CONSTITUENTS_URL, "Nasdaq 100"
+        )
     latest, previous = rows
     day_change = latest.close - previous.close
     day_change_pct = (day_change / previous.close) * 100 if previous.close else 0
