@@ -52,7 +52,7 @@ const formatPercent = (value?: number | null) => {
       <span>{{ summary ? summary.index_value.toFixed(2) : '--' }}</span>
     </div>
     <div class="flex items-center gap-2 text-white text-xl font-semibold">
-      <span>VIX</span>
+      <span class="text-accentOrange">VIX</span>
       <span>{{ summary ? summary.vix_value.toFixed(2) : '--' }}</span>
       <span :class="vixChangeClass">
         {{ summary ? summary.vix_change_pct.toFixed(2) + '%' : '' }}

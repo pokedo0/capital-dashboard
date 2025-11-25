@@ -276,14 +276,16 @@ const attachCrosshair = (
       typeof param.time === 'string'
         ? param.time
         : new Date((param.time as number) * 1000).toISOString().split('T')[0] || '';
-    const entries = Array.from(map.entries()).map(([symbol, series]) => {
-      const point = param.seriesData.get(series);
-      return {
-        label: symbol === 'BTC-USD' ? 'Bitcoin' : symbol,
-        color: COLORS[symbol as AssetSymbol],
-        value: extractValue(point),
-      };
-    });
+    const entries = Array.from(map.entries())
+      .map(([symbol, series]) => {
+        const point = param.seriesData.get(series);
+        return {
+          label: symbol === 'BTC-USD' ? 'Bitcoin' : symbol,
+          color: COLORS[symbol as AssetSymbol],
+          value: extractValue(point),
+        };
+      })
+      .sort((a, b) => (b.value ?? Number.NEGATIVE_INFINITY) - (a.value ?? Number.NEGATIVE_INFINITY));
     hoverTarget.value = { time, entries, position: { x: param.point.x, y: param.point.y } };
   };
   if (type === 'main') {
