@@ -1,4 +1,6 @@
 from datetime import date, timedelta
+import logging
+from logging.config import dictConfig
 from typing import List
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -31,6 +33,31 @@ from .services.breadth import get_market_breadth_series
 from .services.time_ranges import RANGE_TO_DAYS
 from .services.yahoo_client import fetch_and_store
 from .utils.cache import TTLCache
+
+LOGGING_CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {
+            "format": "%(asctime)s %(levelname)s [%(name)s] %(message)s",
+        }
+    },
+    "handlers": {
+        "default": {
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+        }
+    },
+    "loggers": {
+        "": {"handlers": ["default"], "level": "INFO"},
+        "uvicorn": {"handlers": ["default"], "level": "INFO", "propagate": False},
+        "uvicorn.error": {"handlers": ["default"], "level": "INFO", "propagate": False},
+        "uvicorn.access": {"handlers": ["default"], "level": "INFO", "propagate": False},
+    },
+}
+
+dictConfig(LOGGING_CONFIG)
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name)
