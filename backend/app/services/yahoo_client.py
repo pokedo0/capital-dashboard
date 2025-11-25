@@ -17,6 +17,11 @@ from ..models.price import PriceRecord
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s [%(name)s] %(message)s"))
+    logger.addHandler(_handler)
+    logger.propagate = False
 
 
 def _download(symbol: str, start: date, end: date) -> pd.DataFrame:

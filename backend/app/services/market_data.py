@@ -34,6 +34,11 @@ from .yahoo_client import fetch_and_store
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s [%(name)s] %(message)s"))
+    logger.addHandler(_handler)
+    logger.propagate = False
 
 SECTOR_LABELS: Dict[str, str] = {
     "XLC": "Comm Services",
