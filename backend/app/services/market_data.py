@@ -3,10 +3,12 @@ from __future__ import annotations
 from datetime import date, datetime
 import json
 import logging
-from typing import Dict, List, Sequence
+from typing import Dict, List, Sequence, Tuple
 from urllib.error import URLError
 from urllib.request import urlopen, Request
 
+import pandas as pd
+import yfinance as yf
 from sqlalchemy import func
 from sqlmodel import Session, select
 
@@ -42,6 +44,10 @@ SECTOR_LABELS: Dict[str, str] = {
 }
 
 FEAR_GREED_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
+SP500_CONSTITUENTS_URL = (
+    "https://jcoffi.github.io/index-constituents/constituents-sp500.csv"
+)
+SP500_CHUNK_SIZE = 50
 
 
 def ensure_history(session: Session, symbol: str, start: date, end: date) -> None:
@@ -294,10 +300,142 @@ def get_fear_greed_comparison(session: Session, range_key: str) -> FearGreedResp
     return FearGreedResponse(index=index_points, spy=spy_points)
 
 
+def _load_sp500_constituents() -> List[str]:
+    logger.info("Loading S&P 500 constituents from %s", SP500_CONSTITUENTS_URL)
+    try:
+        request = Request(SP500_CONSTITUENTS_URL, headers={"User-Agent": "Mozilla/5.0"})
+        with urlopen(request, timeout=10) as response:
+            df = pd.read_csv(response)
+    except Exception as exc:  # pragma: no cover - network/runtime issues
+        logger.warning("Failed to load S&P 500 constituents: %s", exc)
+        return []
+    if "Symbol" not in df.columns:
+        logger.warning("S&P 500 constituents CSV missing Symbol column")
+        return []
+    normalized: List[str] = []
+    for raw in df["Symbol"].tolist():
+        symbol = str(raw).strip().upper()
+        if not symbol:
+            continue
+        normalized.append(symbol.replace(".", "-"))
+    unique = list(dict.fromkeys(normalized))
+    logger.info("Loaded %d S&P 500 tickers for breadth calculation", len(unique))
+    return unique
+
+
+def _chunked(items: List[str], size: int):
+    for start in range(0, len(items), size):
+        yield items[start : start + size]
+
+
+def _download_sp500_prices(symbols: List[str]) -> pd.DataFrame:
+    if not symbols:
+        return pd.DataFrame()
+    frames: List[pd.DataFrame] = []
+    total_chunks = (len(symbols) + SP500_CHUNK_SIZE - 1) // SP500_CHUNK_SIZE
+    for index, chunk in enumerate(_chunked(symbols, SP500_CHUNK_SIZE), start=1):
+        logger.info(
+            "Downloading S&P 500 prices chunk %d/%d (%d symbols)",
+            index,
+            total_chunks,
+            len(chunk),
+        )
+        try:
+            df = yf.download(
+                chunk,
+                period="5d",
+                group_by="ticker",
+                progress=False,
+                threads=True,
+                auto_adjust=False,
+                actions=False,
+            )
+        except Exception as exc:  # pragma: no cover - network/runtime issues
+            logger.warning("Chunk %d download failed: %s", index, exc)
+            continue
+        if df.empty:
+            logger.warning("Chunk %d/%d returned empty price frame", index, total_chunks)
+            continue
+        if not isinstance(df.columns, pd.MultiIndex):
+            df = pd.concat({chunk[0]: df}, axis=1)
+        frames.append(df)
+    if not frames:
+        logger.warning("No price data downloaded for S&P 500 constituents")
+        return pd.DataFrame()
+    merged = pd.concat(frames, axis=1)
+    logger.info("Completed downloading prices for %d symbols", len(symbols))
+    return merged
+
+
+def _extract_closes(price_frame: pd.DataFrame, symbol: str) -> pd.Series | None:
+    if price_frame.empty:
+        return None
+    try:
+        if isinstance(price_frame.columns, pd.MultiIndex):
+            if symbol not in price_frame.columns.get_level_values(0):
+                return None
+            closes = price_frame[symbol].get("Close")
+        else:
+            closes = price_frame.get("Close")
+    except Exception:
+        return None
+    if closes is None:
+        return None
+    return closes.dropna()
+
+
+def _calculate_sp500_breadth(price_frame: pd.DataFrame, symbols: List[str]) -> Tuple[float | None, float | None]:
+    up = down = flat = missing = 0
+    for symbol in symbols:
+        closes = _extract_closes(price_frame, symbol)
+        if closes is None or len(closes) < 2:
+            missing += 1
+            continue
+        latest = closes.iloc[-1]
+        previous = closes.iloc[-2]
+        if pd.isna(latest) or pd.isna(previous) or previous == 0:
+            missing += 1
+            continue
+        change_pct = ((latest - previous) / previous) * 100
+        if change_pct > 0:
+            up += 1
+        elif change_pct < 0:
+            down += 1
+        else:
+            flat += 1
+    total = up + down + flat
+    logger.info(
+        "S&P 500 breadth summary: up=%d down=%d flat=%d missing=%d (tracked=%d)",
+        up,
+        down,
+        flat,
+        missing,
+        len(symbols),
+    )
+    if total == 0:
+        return None, None
+    return (up / total * 100, down / total * 100)
+
+
+def _sp500_advance_decline() -> Tuple[float | None, float | None]:
+    symbols = _load_sp500_constituents()
+    if not symbols:
+        return None, None
+    price_frame = _download_sp500_prices(symbols)
+    if price_frame.empty:
+        return None, None
+    return _calculate_sp500_breadth(price_frame, symbols)
+
+
 def get_market_summary(session: Session, market: str) -> MarketSummary:
     market_key = market.lower()
     symbol_map = {"sp500": "^GSPC", "nasdaq": "^NDX"}
     symbol = symbol_map.get(market_key, "QQQ")
+    advancers_pct: float | None = None
+    decliners_pct: float | None = None
+    if market_key == "sp500":
+        logger.info("Calculating S&P 500 advance/decline percentages")
+        advancers_pct, decliners_pct = _sp500_advance_decline()
     ensure_history(session, symbol, resolve_range_start("1Y"), resolve_range_end())
     rows = _latest_two_records(session, symbol)
     if len(rows) < 2 or rows[0].close is None or rows[1].close is None:
@@ -325,6 +463,8 @@ def get_market_summary(session: Session, market: str) -> MarketSummary:
         day_change_pct=day_change_pct,
         vix_value=vix_rows[0].close,
         vix_change_pct=vix_change,
+        advancers_pct=advancers_pct,
+        decliners_pct=decliners_pct,
     )
 
 

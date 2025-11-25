@@ -14,10 +14,27 @@ const dayChangeClass = computed(() =>
 const vixChangeClass = computed(() =>
   (props.summary?.vix_change_pct ?? 0) >= 0 ? 'text-accentGreen' : 'text-accentRed',
 );
+
+const formatPercent = (value?: number | null) => {
+  if (value === null || value === undefined) return '--';
+  return `${value.toFixed(1)}%`;
+};
 </script>
 
 <template>
   <div class="flex flex-wrap items-center gap-6 text-lg">
+    <div v-if="summary?.advancers_pct !== undefined" class="flex items-center gap-2">
+      <span class="text-accentOrange uppercase text-base tracking-wide">Advance</span>
+      <span class="text-accentGreen text-xl font-semibold">
+        {{ summary ? formatPercent(summary.advancers_pct) : '--' }}
+      </span>
+    </div>
+    <div v-if="summary?.decliners_pct !== undefined" class="flex items-center gap-2">
+      <span class="text-accentOrange uppercase text-base tracking-wide">Decline</span>
+      <span class="text-accentRed text-xl font-semibold">
+        {{ summary ? formatPercent(summary.decliners_pct) : '--' }}
+      </span>
+    </div>
     <div class="flex items-center gap-2">
       <span class="text-accentOrange uppercase text-base tracking-wide">1 Day Chg</span>
       <span

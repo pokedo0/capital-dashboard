@@ -26,6 +26,8 @@ class MarketSummary(BaseModel):
     day_change_pct: float
     vix_value: float
     vix_change_pct: float
+    advancers_pct: Optional[float] = None
+    decliners_pct: Optional[float] = None
 
 
 class SectorItem(BaseModel):

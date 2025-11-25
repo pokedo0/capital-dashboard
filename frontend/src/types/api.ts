@@ -36,6 +36,8 @@ export interface MarketSummary {
   day_change_pct: number;
   vix_value: number;
   vix_change_pct: number;
+  advancers_pct?: number;
+  decliners_pct?: number;
 }
 
 export interface SectorItem {
