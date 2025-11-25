@@ -16,6 +16,7 @@ from sqlmodel import Session
 from ..models.price import PriceRecord
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def _download(symbol: str, start: date, end: date) -> pd.DataFrame:

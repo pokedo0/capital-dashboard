@@ -33,6 +33,7 @@ from .time_ranges import resolve_range_end, resolve_range_start
 from .yahoo_client import fetch_and_store
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 SECTOR_LABELS: Dict[str, str] = {
     "XLC": "Comm Services",
