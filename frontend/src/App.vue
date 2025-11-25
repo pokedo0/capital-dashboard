@@ -14,27 +14,25 @@ import MarketBreadthChart from './components/MarketBreadthChart.vue';
 import { fetchMarketSummary } from './services/api';
 
 const nasdaqBreadthOptions = [
-  { value: '$NDTW', label: 'NDTW - Above 20-Day Average' },
-  { value: '$NDFI', label: 'NDFI - Above 50-Day Average' },
-  { value: '$NDTH', label: 'NDTH - Above 200-Day Average' },
+  { value: '$NDTW', label: '$NDTW Above 20-Day' },
+  { value: '$NDFI', label: '$NDFI Above 50-Day' },
+  { value: '$NDTH', label: '$NDTH Above 200-Day' },
 ];
 
 const spBreadthOptions = [
-  { value: '$S5TW', label: 'S&P 500 Above 20-Day Average' },
-  { value: '$S5FI', label: 'S&P 500 Above 50-Day Average' },
-  { value: '$S5TH', label: 'S&P 500 Above 200-Day Average' },
+  { value: '$S5TW', label: '$S5TW Above 20-Day' },
+  { value: '$S5FI', label: '$S5FI Above 50-Day' },
+  { value: '$S5TH', label: '$S5TH Above 200-Day' },
 ];
 
 const { data: sp500Summary } = useQuery({
   queryKey: ['market', 'sp500'],
   queryFn: () => fetchMarketSummary('sp500'),
-  refetchInterval: 60_000,
 });
 
 const { data: nasdaqSummary } = useQuery({
   queryKey: ['market', 'nasdaq'],
   queryFn: () => fetchMarketSummary('nasdaq'),
-  refetchInterval: 60_000,
 });
 
 </script>
