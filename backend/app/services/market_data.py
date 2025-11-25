@@ -432,19 +432,32 @@ def _sp500_advance_decline() -> Tuple[float | None, float | None]:
     return _calculate_sp500_breadth(price_frame, symbols)
 
 
+def _latest_market_rows(session: Session, symbol: str) -> List[PriceRecord] | None:
+    ensure_history(session, symbol, resolve_range_start("1Y"), resolve_range_end())
+    rows = _latest_two_records(session, symbol)
+    if len(rows) < 2 or rows[0].close is None or rows[1].close is None:
+        return None
+    return rows
+
+
 def get_market_summary(session: Session, market: str) -> MarketSummary:
     market_key = market.lower()
-    symbol_map = {"sp500": "^GSPC", "nasdaq": "^NDX"}
-    symbol = symbol_map.get(market_key, "QQQ")
+    symbol_map = {"sp500": ["^GSPC", "SPY"], "nasdaq": ["^NDX", "QQQ"]}
+    candidates = symbol_map.get(market_key, ["QQQ"])
+    rows: List[PriceRecord] | None = None
+    symbol = candidates[0]
+    for candidate in candidates:
+        rows = _latest_market_rows(session, candidate)
+        if rows:
+            symbol = candidate
+            break
+    if not rows:
+        raise ValueError("Insufficient data for market summary")
     advancers_pct: float | None = None
     decliners_pct: float | None = None
     if market_key == "sp500":
         logger.info("Calculating S&P 500 advance/decline percentages")
         advancers_pct, decliners_pct = _sp500_advance_decline()
-    ensure_history(session, symbol, resolve_range_start("1Y"), resolve_range_end())
-    rows = _latest_two_records(session, symbol)
-    if len(rows) < 2 or rows[0].close is None or rows[1].close is None:
-        raise ValueError("Insufficient data for market summary")
     latest, previous = rows
     day_change = latest.close - previous.close
     day_change_pct = (day_change / previous.close) * 100 if previous.close else 0
