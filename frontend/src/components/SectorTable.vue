@@ -1,10 +1,16 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { fetchSectorSummary } from '../services/api';
 
 const { data } = useQuery({
   queryKey: ['sectors'],
   queryFn: () => fetchSectorSummary(),
+});
+
+const sortedSectors = computed(() => {
+  const sectors = data.value?.sectors ?? [];
+  return [...sectors].sort((a, b) => (b.change_pct ?? 0) - (a.change_pct ?? 0));
 });
 
 const formatNumber = (value: number) => value.toFixed(2);
@@ -24,7 +30,7 @@ const formatNumber = (value: number) => value.toFixed(2);
           </tr>
         </thead>
         <tbody>
-          <tr v-for="sector in data?.sectors ?? []" :key="sector.symbol" class="border-t border-white/5 text-sm">
+          <tr v-for="sector in sortedSectors" :key="sector.symbol" class="border-t border-white/5 text-sm">
             <td class="py-2 text-white">{{ sector.name }}</td>
             <td class="py-2 text-right" :class="sector.change_pct >= 0 ? 'text-accentGreen' : 'text-accentRed'">
               {{ formatNumber(sector.change_pct) }}%

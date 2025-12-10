@@ -299,18 +299,30 @@ const symbolInput = computed({
       <div class="relative flex-1 min-h-[360px]">
         <div ref="chartContainer" class="absolute inset-0"></div>
         <div
-          v-if="hoverInfo"
-          class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50 shadow-lg"
-          :style="{
-            left: `calc(${hoverInfo.position.x}px + 12px)`,
-            top: `calc(${hoverInfo.position.y}px - 40px)`,
-          }"
-        >
-          <div>{{ hoverInfo.time }}</div>
-          <div>Drawdown: {{ hoverInfo.drawdown?.toFixed(2) ?? '--' }}%</div>
-          <div>Price: {{ hoverInfo.price?.toFixed(2) ?? '--' }}</div>
+        v-if="hoverInfo"
+        class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50 shadow-lg"
+        :style="{
+          left: `calc(${hoverInfo.position.x}px + 12px)`,
+          top: `calc(${hoverInfo.position.y}px - 40px)`,
+        }"
+      >
+        <div>{{ hoverInfo.time }}</div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-[#1d4ed8]"></span>
+            Drawdown
+          </span>
+          <span>{{ hoverInfo.drawdown?.toFixed(2) ?? '--' }}%</span>
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-[#f78c1f]"></span>
+            Price
+          </span>
+          <span>{{ hoverInfo.price?.toFixed(2) ?? '--' }}</span>
         </div>
       </div>
+    </div>
     </div>
     <div class="text-xs uppercase tracking-wide flex gap-4 text-textMuted">
       <span class="flex items-center gap-2">

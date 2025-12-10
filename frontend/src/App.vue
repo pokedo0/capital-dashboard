@@ -72,7 +72,7 @@ const { data: nasdaqSummary } = useQuery({
             :options="nasdaqBreadthOptions"
             benchmark-symbol="^NDX"
             benchmark-label="NDX Index"
-            default-symbol="$NDTW"
+            default-symbol="$NDFI"
             chart-key="nasdaq-breadth"
             default-range="1Y"
           />
@@ -81,7 +81,7 @@ const { data: nasdaqSummary } = useQuery({
             :options="spBreadthOptions"
             benchmark-symbol="^GSPC"
             benchmark-label="SPX Index"
-            default-symbol="$S5TW"
+            default-symbol="$S5FI"
             chart-key="spx-breadth"
             default-range="1Y"
           />

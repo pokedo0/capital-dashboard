@@ -36,8 +36,8 @@ const rangeKey = ref('1Y');
 const showFullscreen = ref(false);
 
 const { data, refetch } = useQuery({
-  queryKey: computed(() => ['ohlcv', 'SPY', rangeKey.value]),
-  queryFn: () => fetchOhlcv('SPY', rangeKey.value),
+  queryKey: computed(() => ['ohlcv', '^GSPC', rangeKey.value]),
+  queryFn: () => fetchOhlcv('^GSPC', rangeKey.value),
   refetchOnMount: false,
 });
 

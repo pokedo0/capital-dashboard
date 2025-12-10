@@ -9,6 +9,7 @@ from urllib.error import URLError
 from urllib.request import urlopen, Request
 
 import pandas as pd
+import requests
 
 # 强制关闭 yfinance 的 curl_cffi，避免环境中 curl/openssl 导致 TLS 异常
 os.environ.setdefault("YF_NO_CURL", "1")
@@ -49,8 +50,8 @@ SECTOR_LABELS: Dict[str, str] = {
 }
 
 FEAR_GREED_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
-SP500_CONSTITUENTS_URL = "https://jcoffi.github.io/index-constituents/constituents-sp500.csv"
-NASDAQ100_CONSTITUENTS_URL = "https://jcoffi.github.io/index-constituents/constituents-nasdaq100.csv"
+ALT_SP500_CONSTITUENTS_URL = "https://pokedo0.github.io/index-constituents/constituents-sp500.csv"
+ALT_NASDAQ100_CONSTITUENTS_URL = "https://pokedo0.github.io/index-constituents/constituents-nasdaq100.csv"
 
 
 def ensure_history(session: Session, symbol: str, start: date, end: date) -> None:
@@ -242,6 +243,80 @@ def _latest_two_records(session: Session, symbol: str) -> List[PriceRecord]:
     )
 
 
+def _latest_record(session: Session, symbol: str) -> PriceRecord | None:
+    row = (
+        session.exec(
+            select(PriceRecord)
+            .where(PriceRecord.symbol == symbol)
+            .order_by(PriceRecord.trade_date.desc())
+            .limit(1)
+        )
+        .unique()
+        .first()
+    )
+    return row
+
+
+def _parse_pct(value: str | float | int | None) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        try:
+            return float(value)
+        except Exception:
+            return None
+    text = str(value).strip().replace("(", "").replace(")", "").replace("%", "")
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def _fetch_constituents_changes(url: str) -> Tuple[float | None, float | None]:
+    """
+    读取成分股 CSV，返回 (advancers_pct, decliners_pct)，涨跌判断基于列 `Chg`（绝对变化）。
+    """
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+    except Exception as exc:  # pragma: no cover - network issues
+        logger.warning("Failed to fetch constituents CSV %s: %s", url, exc)
+        return None, None
+
+    try:
+        from io import StringIO
+        df = pd.read_csv(StringIO(response.text))
+    except Exception as exc:  # pragma: no cover
+        logger.warning("Failed to parse constituents CSV %s: %s", url, exc)
+        return None, None
+
+    if "Symbol" not in df.columns or "Chg" not in df.columns:
+        logger.warning("Constituents CSV missing required columns")
+        return None, None
+
+    total = len(df)
+    if total == 0:
+        return None, None
+
+    advancers = decliners = flats = 0
+    for _, row in df.iterrows():
+        change_val = _parse_pct(row.get("Chg"))
+        if change_val is None:
+            continue
+        if change_val > 0:
+            advancers += 1
+        elif change_val < 0:
+            decliners += 1
+        else:
+            flats += 1
+
+    tracked = advancers + decliners + flats
+    adv_pct = (advancers / tracked * 100) if tracked else None
+    dec_pct = (decliners / tracked * 100) if tracked else None
+
+    return adv_pct, dec_pct
+
+
 def _fetch_fear_greed_history() -> List[ValuePoint]:
     headers = {
         "User-Agent": (
@@ -413,7 +488,6 @@ def _advance_decline_from_url(url: str, label: str) -> Tuple[float | None, float
 
 
 def _latest_market_rows(session: Session, symbol: str) -> List[PriceRecord] | None:
-    ensure_history(session, symbol, resolve_range_start("1Y"), resolve_range_end())
     rows = _latest_two_records(session, symbol)
     if len(rows) < 2 or rows[0].close is None or rows[1].close is None:
         return None
@@ -433,18 +507,20 @@ def get_market_summary(session: Session, market: str) -> MarketSummary:
             break
     if not rows:
         raise ValueError("Insufficient data for market summary")
+
     advancers_pct: float | None = None
     decliners_pct: float | None = None
     if market_key == "sp500":
-        logger.info("Calculating S&P 500 advance/decline percentages")
-        advancers_pct, decliners_pct = _advance_decline_from_url(
-            SP500_CONSTITUENTS_URL, "S&P 500"
-        )
+        logger.info("Calculating S&P 500 advance/decline percentages from CSV")
+        advancers_pct, decliners_pct = _fetch_constituents_changes(ALT_SP500_CONSTITUENTS_URL)
     elif market_key == "nasdaq":
-        logger.info("Calculating Nasdaq 100 advance/decline percentages")
-        advancers_pct, decliners_pct = _advance_decline_from_url(
-            NASDAQ100_CONSTITUENTS_URL, "Nasdaq 100"
-        )
+        logger.info("Calculating Nasdaq 100 advance/decline percentages from CSV")
+        advancers_pct, decliners_pct = _fetch_constituents_changes(ALT_NASDAQ100_CONSTITUENTS_URL)
+
+    ensure_history(session, symbol, resolve_range_start("1Y"), resolve_range_end())
+    rows = _latest_market_rows(session, symbol)
+    if not rows:
+        raise ValueError("Insufficient data for market summary")
     latest, previous = rows
     day_change = latest.close - previous.close
     day_change_pct = (day_change / previous.close) * 100 if previous.close else 0

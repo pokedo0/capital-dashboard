@@ -192,8 +192,20 @@ const benchmarkInput = computed({
         :style="{ left: `calc(${hoverInfo.position.x}px + 12px)`, top: `calc(${hoverInfo.position.y}px - 40px)` }"
       >
         <div>{{ hoverInfo.time }}</div>
-        <div>Ratio: {{ hoverInfo.ratio?.toFixed(2) ?? '--' }}</div>
-        <div>50D Avg: {{ hoverInfo.average?.toFixed(2) ?? '--' }}</div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-[#60a5fa]"></span>
+            Ratio
+          </span>
+          <span>{{ hoverInfo.ratio?.toFixed(2) ?? '--' }}</span>
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-[#f78c1f]"></span>
+            50D Avg
+          </span>
+          <span>{{ hoverInfo.average?.toFixed(2) ?? '--' }}</span>
+        </div>
       </div>
     </div>
     <div class="text-xs uppercase tracking-wide flex gap-4 text-textMuted">
