@@ -359,23 +359,24 @@ def get_fear_greed_comparison(session: Session, range_key: str) -> FearGreedResp
     index_points = [
         point for point in _fetch_fear_greed_history() if start <= point.time <= end
     ]
-    ensure_history(session, "SPY", start, end)
-    spy_records = (
+    benchmark_symbol = "^GSPC"
+    ensure_history(session, benchmark_symbol, start, end)
+    benchmark_records = (
         session.exec(
             select(PriceRecord)
-            .where(PriceRecord.symbol == "SPY")
+            .where(PriceRecord.symbol == benchmark_symbol)
             .where(PriceRecord.trade_date.between(start, end))
             .order_by(PriceRecord.trade_date)
         )
         .unique()
         .all()
     )
-    spy_points = [
+    benchmark_points = [
         ValuePoint(time=record.trade_date, value=record.close)
-        for record in spy_records
+        for record in benchmark_records
         if record.close is not None
     ]
-    return FearGreedResponse(index=index_points, spy=spy_points)
+    return FearGreedResponse(index=index_points, spy=benchmark_points)
 
 
 def _load_constituents(url: str, label: str) -> List[str]:

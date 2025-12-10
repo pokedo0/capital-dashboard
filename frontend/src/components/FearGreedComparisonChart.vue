@@ -494,7 +494,7 @@ const indexLabel = computed(() => {
           <span>{{ mainHover.fear?.toFixed(1) ?? '--' }}</span>
         </div>
         <div class="flex justify-between gap-2">
-          <span class="text-slate-200">SPY</span>
+          <span class="text-slate-200">S&P 500</span>
           <span>{{ mainHover.spy?.toFixed(2) ?? '--' }}</span>
         </div>
       </div>
@@ -504,12 +504,12 @@ const indexLabel = computed(() => {
         <span class="w-4 h-1 bg-red-400 rounded-full"></span> Fear & Greed Index
       </span>
       <span class="flex items-center gap-2">
-        <span class="w-4 h-1 bg-slate-300 rounded-full"></span> SPY Close
+        <span class="w-4 h-1 bg-slate-300 rounded-full"></span> S&P 500 Close
       </span>
     </div>
     <FullscreenModal
       :open="showFullscreen"
-      title="Fear & Greed vs SPY"
+      title="Fear & Greed vs S&P 500"
       @close="showFullscreen = false"
     >
       <div class="relative flex-1 min-h-[70vh]">
@@ -542,7 +542,7 @@ const indexLabel = computed(() => {
             <span>{{ fullscreenHover.fear?.toFixed(1) ?? '--' }}</span>
           </div>
           <div class="flex justify-between gap-2">
-            <span class="text-slate-200">SPY</span>
+            <span class="text-slate-200">S&P 500</span>
             <span>{{ fullscreenHover.spy?.toFixed(2) ?? '--' }}</span>
           </div>
         </div>
