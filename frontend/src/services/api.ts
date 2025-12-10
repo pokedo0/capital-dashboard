@@ -3,6 +3,7 @@ import type {
   DailyPerformanceItem,
   DrawdownResponse,
   FearGreedResponse,
+  ForwardPeResponse,
   MarketBreadthResponse,
   MarketSummary,
   RelativeSeries,
@@ -72,6 +73,15 @@ export const fetchFearGreedComparison = async (
   range = '1Y',
 ): Promise<FearGreedResponse> => {
   const { data } = await api.get<FearGreedResponse>('/api/market/fear-greed', {
+    params: { range },
+  });
+  return data;
+};
+
+export const fetchForwardPeComparison = async (
+  range = '1Y',
+): Promise<ForwardPeResponse> => {
+  const { data } = await api.get<ForwardPeResponse>('/api/market/forward-pe', {
     params: { range },
   });
   return data;

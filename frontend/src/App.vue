@@ -11,6 +11,7 @@ import DrawdownChart from './components/DrawdownChart.vue';
 import RelativeComparisonChart from './components/RelativeComparisonChart.vue';
 import FearGreedComparisonChart from './components/FearGreedComparisonChart.vue';
 import MarketBreadthChart from './components/MarketBreadthChart.vue';
+import SpForwardPeChart from './components/SpForwardPeChart.vue';
 import { fetchMarketSummary } from './services/api';
 
 const nasdaqBreadthOptions = [
@@ -89,6 +90,7 @@ const { data: nasdaqSummary } = useQuery({
 
       <section class="space-y-6">
         <FearGreedComparisonChart />
+        <SpForwardPeChart />
         <MultiAssetComparisonChart />
       </section>
 

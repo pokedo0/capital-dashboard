@@ -82,3 +82,8 @@ export interface FearGreedResponse {
   index: ValuePoint[];
   spy: ValuePoint[];
 }
+
+export interface ForwardPeResponse {
+  forward_pe: ValuePoint[];
+  spx: ValuePoint[];
+}

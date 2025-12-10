@@ -13,6 +13,7 @@ from .db import get_session, init_db, session_scope
 from .schemas.market import (
     DrawdownResponse,
     FearGreedResponse,
+    ForwardPeResponse,
     MarketBreadthResponse,
     MarketSummary,
     RelativeToResponse,
@@ -30,6 +31,7 @@ from .services.market_data import (
     get_sector_summary,
 )
 from .services.breadth import get_market_breadth_series
+from .services.forward_pe import get_forward_pe_comparison
 from .services.time_ranges import RANGE_TO_DAYS
 from .services.yahoo_client import fetch_and_store
 from .utils.cache import TTLCache
@@ -72,6 +74,7 @@ drawdown_cache: TTLCache[DrawdownResponse] = TTLCache(settings.cache_ttl_seconds
 relative_to_cache: TTLCache[RelativeToResponse] = TTLCache(settings.cache_ttl_seconds)
 fear_greed_cache: TTLCache[FearGreedResponse] = TTLCache(settings.cache_ttl_seconds)
 breadth_cache: TTLCache[MarketBreadthResponse] = TTLCache(settings.cache_ttl_seconds)
+forward_pe_cache: TTLCache[ForwardPeResponse] = TTLCache(settings.cache_ttl_seconds)
 
 app.add_middleware(
     CORSMiddleware,
@@ -110,6 +113,7 @@ def daily_refresh_job() -> None:
     relative_to_cache.clear()
     fear_greed_cache.clear()
     breadth_cache.clear()
+    forward_pe_cache.clear()
 
 
 @app.on_event("startup")
@@ -271,3 +275,16 @@ def api_market_breadth(
         )
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.get("/api/market/forward-pe", response_model=ForwardPeResponse)
+def api_forward_pe(
+    range_key: str = Query("1Y", alias="range"), session: Session = Depends(get_session)
+) -> ForwardPeResponse:
+    cache_key = range_key.upper()
+    try:
+        return forward_pe_cache.get_or_set(
+            cache_key, lambda: get_forward_pe_comparison(session, range_key)
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

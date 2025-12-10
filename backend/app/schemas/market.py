@@ -76,3 +76,8 @@ class MarketBreadthResponse(BaseModel):
     benchmark_percent: RelativeSeries
     benchmark_price: List[ValuePoint]
     series: List[RelativeSeries]
+
+
+class ForwardPeResponse(BaseModel):
+    forward_pe: List[ValuePoint]
+    spx: List[ValuePoint]
