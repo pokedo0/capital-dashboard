@@ -170,7 +170,7 @@ const initChart = () => {
   chart.applyOptions({ width: size.width, height: size.height });
 
   peSeries = chart.addSeries(LineSeriesDefinition, {
-    color: '#22c55e',
+    color: '#f04949',
     lineWidth: 2,
     priceLineVisible: false,
     priceScaleId: 'left',
@@ -180,7 +180,7 @@ const initChart = () => {
     priceFormat: { type: 'custom', formatter: (value: number) => value.toFixed(2) },
   });
   spxSeries = chart.addSeries(LineSeriesDefinition, {
-    color: '#60a5fa',
+    color: '#bdc3c7',
     lineWidth: 2,
     priceLineVisible: false,
     priceScaleId: 'right',
@@ -241,7 +241,7 @@ const initFullscreenChart = () => {
   fullscreenChart.applyOptions({ width: size.width, height: size.height });
 
   fullscreenPeSeries = fullscreenChart.addSeries(LineSeriesDefinition, {
-    color: '#22c55e',
+    color: '#f04949',
     lineWidth: 2,
     priceLineVisible: false,
     priceScaleId: 'left',
@@ -251,7 +251,7 @@ const initFullscreenChart = () => {
     priceFormat: { type: 'custom', formatter: (value: number) => value.toFixed(2) },
   });
   fullscreenSpxSeries = fullscreenChart.addSeries(LineSeriesDefinition, {
-    color: '#60a5fa',
+    color: '#bdc3c7',
     lineWidth: 2,
     priceLineVisible: false,
     priceScaleId: 'right',
@@ -380,7 +380,7 @@ onBeforeUnmount(() => {
         <div class="text-sm font-semibold">{{ hoverInfo.time }}</div>
         <div class="flex items-center justify-between gap-3">
           <span class="flex items-center gap-2">
-            <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+            <span class="h-2.5 w-2.5 rounded-full" style="background-color: #f04949"></span>
             Forward P/E
           </span>
           <span class="font-mono">
@@ -389,7 +389,7 @@ onBeforeUnmount(() => {
         </div>
         <div class="flex items-center justify-between gap-3">
           <span class="flex items-center gap-2">
-            <span class="h-2.5 w-2.5 rounded-full bg-sky-400"></span>
+            <span class="h-2.5 w-2.5 rounded-full" style="background-color: #bdc3c7"></span>
             S&amp;P 500 (^GSPC)
           </span>
           <span class="font-mono">
@@ -401,11 +401,11 @@ onBeforeUnmount(() => {
 
     <div class="mt-2 flex flex-wrap gap-4 text-xs text-slate-300">
       <div class="flex items-center gap-2">
-        <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+        <span class="h-2.5 w-2.5 rounded-full" style="background-color: #f04949"></span>
         <span>Forward P/E Ratio</span>
       </div>
       <div class="flex items-center gap-2">
-        <span class="h-2.5 w-2.5 rounded-full bg-sky-400"></span>
+        <span class="h-2.5 w-2.5 rounded-full" style="background-color: #bdc3c7"></span>
         <span>S&amp;P 500 Index (^GSPC)</span>
       </div>
     </div>
@@ -421,8 +421,8 @@ onBeforeUnmount(() => {
           >
             <div class="text-sm font-semibold">{{ fullscreenHover.time }}</div>
             <div class="flex items-center justify-between gap-3">
-              <span class="flex items-center gap-2">
-                <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+            <span class="flex items-center gap-2">
+                <span class="h-2.5 w-2.5 rounded-full" style="background-color: #f04949"></span>
                 Forward P/E
               </span>
               <span class="font-mono">
@@ -431,14 +431,14 @@ onBeforeUnmount(() => {
             </div>
             <div class="flex items-center justify-between gap-3">
               <span class="flex items-center gap-2">
-                <span class="h-2.5 w-2.5 rounded-full bg-sky-400"></span>
+                <span class="h-2.5 w-2.5 rounded-full" style="background-color: #bdc3c7"></span>
                 S&amp;P 500 (^GSPC)
               </span>
               <span class="font-mono">
                 {{ typeof fullscreenHover.spx === 'number' ? fullscreenHover.spx.toFixed(2) : '—' }}
               </span>
-            </div>
           </div>
+        </div>
         </div>
       </div>
     </FullscreenModal>
