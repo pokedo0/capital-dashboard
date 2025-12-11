@@ -383,7 +383,7 @@ const attachCrosshair = (
   <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4">
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
-        <div class="text-xl text-accentCyan font-semibold uppercase">SPY Price & Volume</div>
+        <div class="text-xl text-accentCyan font-semibold uppercase">SP500 Price & Volume</div>
         <p class="text-sm text-textMuted">Index price with 30-day average and volume overlay</p>
       </div>
       <div class="flex items-center gap-3">
