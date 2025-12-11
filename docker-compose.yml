@@ -4,7 +4,7 @@ services:
   backend:
 #    build:
 #      context: ./backend
-    image: ghcr.io/OWNER/REPO:backend-latest
+    image: ghcr.io/pokedo0/capital-dashboard:backend-latest
     container_name: capital-backend
     restart: unless-stopped
     volumes:
@@ -25,7 +25,7 @@ services:
 #      context: ./frontend
 #      args:
 #        VITE_API_BASE_URL: /api
-    image: ghcr.io/OWNER/REPO:frontend-latest
+    image: ghcr.io/pokedo0/capital-dashboard:frontend-latest
     container_name: capital-frontend
     restart: unless-stopped
     expose:
