@@ -7,6 +7,8 @@ import {
   type IChartApi,
   type ISeriesApi,
   type MouseEventParams,
+  type Time,
+  type BusinessDay,
 } from 'lightweight-charts';
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
@@ -57,27 +59,6 @@ const measureSize = (element: HTMLElement) => {
   };
 };
 
-const downsampleWeekly = (points: { time: string; value: number }[]) => {
-  if (!points.length) return points;
-  const result: typeof points = [];
-  let lastSample: number | null = null;
-  const weekMs = 7 * 24 * 60 * 60 * 1000;
-  points.forEach((point) => {
-    const current = new Date(point.time).getTime();
-    if (Number.isNaN(current)) {
-      result.push(point);
-      return;
-    }
-    if (lastSample === null || current - lastSample >= weekMs) {
-      result.push(point);
-      lastSample = current;
-    } else {
-      result[result.length - 1] = point;
-    }
-  });
-  return result;
-};
-
 const extractValue = (point: unknown): number | undefined => {
   if (typeof point === 'object' && point && 'value' in point) {
     const value = (point as { value?: number }).value;
@@ -86,10 +67,15 @@ const extractValue = (point: unknown): number | undefined => {
   return undefined;
 };
 
-const formatTime = (value: string | number) => {
+const formatTime = (value: Time) => {
   if (typeof value === 'string') return value;
-  const date = new Date((value as number) * 1000);
-  return date.toISOString().split('T')[0] ?? '';
+  if (typeof value === 'number') {
+    const date = new Date(value * 1000);
+    return date.toISOString().split('T')[0] ?? '';
+  }
+  const day = String((value as BusinessDay).day).padStart(2, '0');
+  const month = String((value as BusinessDay).month).padStart(2, '0');
+  return `${(value as BusinessDay).year}-${month}-${day}`;
 };
 
 const tooltipStyle = (

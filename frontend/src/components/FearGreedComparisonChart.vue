@@ -425,7 +425,8 @@ const zoneBadges = [
 ];
 
 const indexLabel = computed(() => {
-  const latest = data.value?.index?.at(-1);
+  const series = data.value?.index;
+  const latest = series && series.length ? series[series.length - 1] : undefined;
   if (latest && typeof latest.value === 'number' && Number.isFinite(latest.value)) {
     return latest.value.toFixed(2);
   }

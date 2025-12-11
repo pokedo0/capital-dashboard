@@ -6,3 +6,4 @@ pandas>=2.2.3
 yfinance>=0.2.66
 apscheduler>=3.10.4
 curl-cffi>=0.7.3
+barchart_api>=0.12.4
