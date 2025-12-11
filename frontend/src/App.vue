@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useQuery } from '@tanstack/vue-query';
+import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import MarketHeader from './components/MarketHeader.vue';
 import MarketStatsRow from './components/MarketStatsRow.vue';
 import Sp500PriceVolumeChart from './components/Sp500PriceVolumeChart.vue';
@@ -12,7 +12,8 @@ import RelativeComparisonChart from './components/RelativeComparisonChart.vue';
 import FearGreedComparisonChart from './components/FearGreedComparisonChart.vue';
 import MarketBreadthChart from './components/MarketBreadthChart.vue';
 import SpForwardPeChart from './components/SpForwardPeChart.vue';
-import { fetchMarketSummary } from './services/api';
+import { clearApiCache, fetchMarketSummary } from './services/api';
+import { ref } from 'vue';
 
 const nasdaqBreadthOptions = [
   { value: '$NDTW', label: '$NDTW Above 20-Day' },
@@ -36,18 +37,50 @@ const { data: nasdaqSummary } = useQuery({
   queryFn: () => fetchMarketSummary('nasdaq'),
 });
 
+const queryClient = useQueryClient();
+const clearingCache = ref(false);
+
+const handleClearCache = async () => {
+  if (clearingCache.value) return;
+  clearingCache.value = true;
+  try {
+    await clearApiCache();
+    await queryClient.invalidateQueries();
+  } finally {
+    clearingCache.value = false;
+  }
+};
+
 </script>
 
 <template>
   <div class="min-h-screen bg-background text-white py-8">
     <div class="mx-auto w-full max-w-[1500px] px-4 md:px-10 space-y-10">
-      <section>
+      <section class="flex flex-wrap items-start justify-between gap-4">
         <MarketHeader
           title="Shepherd Capital Markets"
           subtitle="S&P500 Dashboard"
           :summary="sp500Summary"
           :show-absolute-change="false"
-        />
+        >
+          <template #actions>
+            <button
+              type="button"
+              class="relative flex items-center justify-center bg-white/10 hover:bg-white/20 active:scale-95 text-white p-2 rounded-full border border-white/25 transition disabled:opacity-60"
+              :disabled="clearingCache"
+              @click="handleClearCache"
+              title="Force refresh cached data"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+              </svg>
+              <span
+                v-if="clearingCache"
+                class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs bg-black/80 border border-white/20 rounded px-2 py-1 whitespace-nowrap"
+              >Refreshing...</span>
+            </button>
+          </template>
+        </MarketHeader>
       </section>
 
       <section class="grid gap-6 xl:grid-cols-[2fr,1fr]">

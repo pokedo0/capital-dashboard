@@ -37,8 +37,11 @@ const formattedDate = computed(() => {
     <div v-else class="mt-2 text-3xl font-semibold uppercase tracking-widest">
       {{ title }}
     </div>
-    <div class="mt-2 text-2xl text-accentCyan font-semibold uppercase">
-      {{ subtitle }}
+    <div class="mt-2 flex items-center justify-between gap-3">
+      <div class="text-2xl text-accentCyan font-semibold uppercase">
+        {{ subtitle }}
+      </div>
+      <slot name="actions" />
     </div>
     <MarketStatsRow
       :summary="summary"

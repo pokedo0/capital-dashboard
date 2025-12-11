@@ -29,6 +29,7 @@ from .services.market_data import (
     get_relative_to_series,
     get_relative_performance,
     get_sector_summary,
+    price_series_cache,
 )
 from .services.breadth import get_market_breadth_series
 from .services.forward_pe import get_forward_pe_comparison
@@ -93,6 +94,21 @@ def _refresh_history(symbols: List[str], years: int = 5) -> None:
             fetch_and_store(session, symbol, start, end)
 
 
+def clear_all_caches(source: str = "unknown") -> None:
+    logger.info("Clearing caches (source=%s)", source)
+    ohlcv_cache.clear()
+    relative_cache.clear()
+    daily_cache.clear()
+    market_cache.clear()
+    sector_cache.clear()
+    drawdown_cache.clear()
+    relative_to_cache.clear()
+    fear_greed_cache.clear()
+    breadth_cache.clear()
+    forward_pe_cache.clear()
+    price_series_cache.clear()
+
+
 def daily_refresh_job() -> None:
     refresh_symbols = list(
         dict.fromkeys(
@@ -104,16 +120,7 @@ def daily_refresh_job() -> None:
     with session_scope() as session:
         for symbol in refresh_symbols:
             fetch_and_store(session, symbol, start, end)
-    ohlcv_cache.clear()
-    relative_cache.clear()
-    daily_cache.clear()
-    market_cache.clear()
-    sector_cache.clear()
-    drawdown_cache.clear()
-    relative_to_cache.clear()
-    fear_greed_cache.clear()
-    breadth_cache.clear()
-    forward_pe_cache.clear()
+    clear_all_caches(source="scheduler")
 
 
 @app.on_event("startup")
@@ -129,7 +136,10 @@ def on_startup() -> None:
             )
         )
     )
-    scheduler.add_job(daily_refresh_job, "cron", hour=0, minute=30)
+    # 美东时间 16:15（刚收盘后）跑一次增量刷新
+    scheduler.add_job(daily_refresh_job, "cron", day_of_week="mon-fri", hour=16, minute=15)
+    # 美东时间 18:00（夜盘/盘后时段开始后）再跑一次，覆盖盘后数据
+    scheduler.add_job(daily_refresh_job, "cron", day_of_week="mon-fri", hour=18, minute=15)
     scheduler.start()
 
 
@@ -288,3 +298,9 @@ def api_forward_pe(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/cache/clear")
+def api_clear_cache() -> dict:
+    clear_all_caches(source="api")
+    return {"status": "ok"}

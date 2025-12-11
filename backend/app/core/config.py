@@ -30,11 +30,12 @@ class Settings(BaseModel):
         ]
     )
     mag7_symbols: List[str] = Field(
-        default=["NVDA", "GOOG", "AMZN", "AAPL", "META", "MSFT", "TSLA"]
+        default=["NVDA", "GOOG", "AMZN", "AAPL", "META", "MSFT", "TSLA", "AVGO", "TSM"]
     )
     multi_asset_symbols: List[str] = Field(default=["SPY", "GLD", "QQQ", "BTC-USD"])
     timezone: str = "US/Eastern"
-    cache_ttl_seconds: int = 60
+    # 统一接口缓存 10 分钟，减少重复计算/请求
+    cache_ttl_seconds: int = 600
     barchart_api_key: str | None = Field(default_factory=lambda: os.getenv("BARCHART_API_KEY"))
 
 

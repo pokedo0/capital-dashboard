@@ -19,6 +19,8 @@ from sqlalchemy import func
 from sqlmodel import Session, select
 
 from ..models.price import PriceRecord
+from ..core.config import get_settings
+from ..utils.cache import TTLCache
 from ..schemas.market import (
     DrawdownResponse,
     FearGreedResponse,
@@ -33,7 +35,12 @@ from ..schemas.market import (
 from .time_ranges import resolve_range_end, resolve_range_start
 from .yahoo_client import fetch_and_store
 
+settings = get_settings()
+
 logger = logging.getLogger(__name__)
+
+# 复用 10 分钟行情缓存，避免在多个接口中重复查询相同区间的价格序列
+price_series_cache: TTLCache[List[PriceRecord]] = TTLCache(settings.cache_ttl_seconds)
 
 SECTOR_LABELS: Dict[str, str] = {
     "XLC": "Comm Services",
@@ -50,8 +57,8 @@ SECTOR_LABELS: Dict[str, str] = {
 }
 
 FEAR_GREED_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
-ALT_SP500_CONSTITUENTS_URL = "https://pokedo0.github.io/index-constituents/constituents-sp500.csv"
-ALT_NASDAQ100_CONSTITUENTS_URL = "https://pokedo0.github.io/index-constituents/constituents-nasdaq100.csv"
+ALT_SP500_CONSTITUENTS_URL = "https://raw.githubusercontent.com/pokedo0/index-constituents/main/docs/constituents-sp500.csv"
+ALT_NASDAQ100_CONSTITUENTS_URL = "https://raw.githubusercontent.com/pokedo0/index-constituents/main/docs/constituents-nasdaq100.csv"
 
 
 def ensure_history(session: Session, symbol: str, start: date, end: date) -> None:
@@ -62,6 +69,26 @@ def ensure_history(session: Session, symbol: str, start: date, end: date) -> Non
     ).first()
     if not result or result[0] is None or result[0] > start or result[1] is None or result[1] < end:
         fetch_and_store(session, symbol, start, end)
+
+
+def _load_price_records(session: Session, symbol: str, start: date, end: date) -> List[PriceRecord]:
+    normalized = symbol.upper()
+    key = (normalized, start, end)
+
+    def _creator() -> List[PriceRecord]:
+        ensure_history(session, normalized, start, end)
+        return (
+            session.exec(
+                select(PriceRecord)
+                .where(PriceRecord.symbol == normalized)
+                .where(PriceRecord.trade_date.between(start, end))
+                .order_by(PriceRecord.trade_date)
+            )
+            .unique()
+            .all()
+        )
+
+    return price_series_cache.get_or_set(key, _creator)
 
 
 def to_points(records: Sequence[PriceRecord]) -> List[OHLCVPoint]:
@@ -81,12 +108,7 @@ def to_points(records: Sequence[PriceRecord]) -> List[OHLCVPoint]:
 def get_ohlcv_series(session: Session, symbol: str, range_key: str) -> SeriesPayload:
     start = resolve_range_start(range_key)
     end = resolve_range_end()
-    ensure_history(session, symbol, start, end)
-    records = session.exec(
-        select(PriceRecord)
-        .where(PriceRecord.symbol == symbol)
-        .where(PriceRecord.trade_date.between(start, end))
-    ).all()
+    records = _load_price_records(session, symbol, start, end)
     return SeriesPayload(symbol=symbol, points=to_points(records))
 
 
@@ -95,13 +117,7 @@ def get_relative_performance(session: Session, symbols: List[str], range_key: st
     start = resolve_range_start(range_key)
     end = resolve_range_end()
     for symbol in symbols:
-        ensure_history(session, symbol, start, end)
-        records = session.exec(
-            select(PriceRecord)
-            .where(PriceRecord.symbol == symbol)
-            .where(PriceRecord.trade_date.between(start, end))
-            .order_by(PriceRecord.trade_date)
-        ).all()
+        records = _load_price_records(session, symbol, start, end)
         if not records:
             continue
         first_close = next((r.close for r in records if r.close), None)
@@ -138,17 +154,7 @@ def get_daily_performance(session: Session, symbols: List[str]) -> List[Dict]:
 def get_drawdown_series(session: Session, symbol: str, range_key: str) -> DrawdownResponse:
     start = resolve_range_start(range_key)
     end = resolve_range_end()
-    ensure_history(session, symbol, start, end)
-    records = (
-        session.exec(
-            select(PriceRecord)
-            .where(PriceRecord.symbol == symbol)
-            .where(PriceRecord.trade_date.between(start, end))
-            .order_by(PriceRecord.trade_date)
-        )
-        .unique()
-        .all()
-    )
+    records = _load_price_records(session, symbol, start, end)
     drawdown_points: List[ValuePoint] = []
     price_points: List[ValuePoint] = []
     peak: float | None = None
@@ -180,21 +186,8 @@ def get_relative_to_series(
 ) -> RelativeToResponse:
     start = resolve_range_start(range_key)
     end = resolve_range_end()
-    ensure_history(session, symbol, start, end)
-    ensure_history(session, benchmark, start, end)
-
-    symbol_rows = session.exec(
-        select(PriceRecord)
-        .where(PriceRecord.symbol == symbol)
-        .where(PriceRecord.trade_date.between(start, end))
-        .order_by(PriceRecord.trade_date)
-    ).all()
-    benchmark_rows = session.exec(
-        select(PriceRecord)
-        .where(PriceRecord.symbol == benchmark)
-        .where(PriceRecord.trade_date.between(start, end))
-        .order_by(PriceRecord.trade_date)
-    ).all()
+    symbol_rows = _load_price_records(session, symbol, start, end)
+    benchmark_rows = _load_price_records(session, benchmark, start, end)
     benchmark_map = {row.trade_date: row.close for row in benchmark_rows if row.close}
 
     ratio_points: List[ValuePoint] = []

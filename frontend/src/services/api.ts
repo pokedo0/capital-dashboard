@@ -97,3 +97,7 @@ export const fetchMarketBreadth = async (
   });
   return data;
 };
+
+export const clearApiCache = async (): Promise<void> => {
+  await api.post('/api/cache/clear');
+};
