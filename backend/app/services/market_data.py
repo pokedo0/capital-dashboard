@@ -236,20 +236,6 @@ def _latest_two_records(session: Session, symbol: str) -> List[PriceRecord]:
     )
 
 
-def _latest_record(session: Session, symbol: str) -> PriceRecord | None:
-    row = (
-        session.exec(
-            select(PriceRecord)
-            .where(PriceRecord.symbol == symbol)
-            .order_by(PriceRecord.trade_date.desc())
-            .limit(1)
-        )
-        .unique()
-        .first()
-    )
-    return row
-
-
 def _parse_pct(value: str | float | int | None) -> float | None:
     if value is None:
         return None
@@ -469,16 +455,6 @@ def _calculate_breadth(price_frame: pd.DataFrame, symbols: List[str]) -> Tuple[f
     if total == 0:
         return None, None
     return (up / total * 100, down / total * 100)
-
-
-def _advance_decline_from_url(url: str, label: str) -> Tuple[float | None, float | None]:
-    symbols = _load_constituents(url, label)
-    if not symbols:
-        return None, None
-    price_frame = _download_prices(symbols, label)
-    if price_frame.empty:
-        return None, None
-    return _calculate_breadth(price_frame, symbols)
 
 
 def _latest_market_rows(session: Session, symbol: str) -> List[PriceRecord] | None:
