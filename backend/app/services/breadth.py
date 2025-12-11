@@ -4,7 +4,7 @@ from datetime import date, datetime
 import logging
 from typing import Dict, List, Sequence, Tuple
 
-from ..clients import barchart_api
+import barchart_api
 from sqlmodel import Session, select
 
 from ..core.config import get_settings

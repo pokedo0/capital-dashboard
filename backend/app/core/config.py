@@ -1,5 +1,4 @@
 from functools import lru_cache
-import os
 from typing import List
 
 from pydantic import BaseModel, Field
@@ -36,7 +35,6 @@ class Settings(BaseModel):
     timezone: str = "US/Eastern"
     # 统一接口缓存 10 分钟，减少重复计算/请求
     cache_ttl_seconds: int = 600
-    barchart_api_key: str | None = Field(default_factory=lambda: os.getenv("BARCHART_API_KEY"))
 
 
 @lru_cache(maxsize=1)
