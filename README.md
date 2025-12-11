@@ -1,15 +1,21 @@
 # Shepherd Capital Dashboard
 
-前后端分离的美股可视化仪表盘示例。后端使用 FastAPI + SQLite + APScheduler 抓取雅虎行情，前端采用 Vue 3 + Vite + Tailwind + lightweight-charts，实现图片中所列 S&P500 / NASDAQ100 / 多资产图表。
+前后端分离的美股可视化仪表盘。后端使用 FastAPI + SQLite + APScheduler 抓取雅虎行情与 Barchart 市场宽度数据，前端采用 Vue 3 + Vite + Tailwind + lightweight-charts 实现多图表可视化。
 
 ## 目录结构
 
 ```
 backend/        FastAPI 服务、数据库、scheduler
-backend/data/   默认 SQLite 输出目录（market.db 会写在这里）
+backend/data/   默认 SQLite 输出目录（market.db）
 frontend/       Vue3 单页应用、图表组件
 deploy/         docker/nginx 相关文件
 ```
+
+## 环境要求
+
+- Python 3.10+
+- Node.js 18+（含 npm）
+- Docker / Docker Compose（可选，用于一键部署）
 
 ## 本地开发
 
@@ -17,11 +23,13 @@ deploy/         docker/nginx 相关文件
 ```bash
 cd backend
 python -m venv .venv
-source .venv/bin/activate  # Windows 使用 .venv\\Scripts\\activate
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 pip install -e .
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
+- 默认使用雅虎接口抓取行情，市场宽度数据通过三方库 `barchart_api` 调用公开接口，无需额外 API Key。
+- SQLite 文件写入 `backend/data/market.db`，已被 `.gitignore` 忽略。
 
 ### 前端
 ```bash
@@ -29,16 +37,14 @@ cd frontend
 npm install
 npm run dev -- --host
 ```
+- 接口地址通过 `frontend/.env` 配置，默认 `VITE_API_BASE_URL=http://localhost:8000/api`。
 
 ### Windows 一键启动
-如果已经按上面步骤装好依赖，可直接运行脚本同时启动前后端：
-
+若依赖已安装，可在仓库根目录运行：
 ```powershell
-cd <repo-root>
-start-dev.bat
+start-dev.bat  # 可选参数：<backend_host> <backend_port> <frontend_port>
 ```
-
-脚本会新开两个命令行窗口分别运行后端 `uvicorn` 与前端 `npm run dev`，关闭任意窗口即可停止对应服务。也可以传入自定义端口：`start-dev.bat <backend_host> <backend_port> <frontend_port>`（均可选）。
+脚本会新开两个窗口分别启动后端与前端。
 
 ## Docker 部署
 
@@ -46,19 +52,15 @@ start-dev.bat
 docker compose up --build -d
 ```
 
-- `backend`：运行 FastAPI，SQLite 数据写入 `backend/data/market.db`
-- `frontend`：构建静态资源后由 nginx 容器提供
-- `proxy`：nginx 反向代理，对外暴露 80 端口，`/api` 转发到后端，其余流量走前端
+- `backend`：FastAPI，SQLite 数据写入 `backend/data/market.db`
+- `frontend`：Vite 构建后由 nginx 提供静态资源
+- `proxy`：nginx 反向代理，对外暴露 80 端口，`/api` 转发后端，其余流量走前端
 
-> 若已有外部代理，可仅运行 `backend` + `frontend` 并调整端口。
+若已有外部代理，可仅运行 `backend` 与 `frontend` 服务并自行暴露端口。
 
-## 关键特性回顾
+## 快速测试
 
-- APScheduler 示例：`app.main` 中在 `startup` 触发 `_refresh_history` 并注册每日 `cron` 任务
-- 内存缓存：自建 TTL cache（60s），保证 512MB VPS 内足够轻量
-- SQLite 持久化 1~5 年历史数据
-- Vue 组件复刻截图中所有图表功能，支持时间范围切换、legend 显隐、全屏放大
-- Drawdown、Relative charts：新增股票回撤图 + 股票相对基准图，支持自选标的
-- Tailwind + 自定义暗色主题，移动端响应式布局
+- 后端：可运行 `pytest test/test_yfquery.py` 或 `pytest test/test_barchart_nvda.py`（需联网）。
+- 前端：`npm run build` 验证编译是否通过。
 
-更多细节可参见 `backend/README.md` 与前端源码注释。
+更多细节见 `backend/README.md`，组件与接口说明可阅读对应源码注释。

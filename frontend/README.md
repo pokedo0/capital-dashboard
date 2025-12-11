@@ -1,5 +1,27 @@
-# Vue 3 + TypeScript + Vite
+# Capital Dashboard Frontend
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Vue 3 + Vite + Tailwind 的单页应用，展示市场概览、回撤、相对表现、多资产等图表。
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+## 本地开发
+
+```bash
+cd frontend
+npm install
+npm run dev -- --host
+```
+
+接口地址通过 `.env` 配置，默认 `VITE_API_BASE_URL=http://localhost:8000/api`。
+
+## 构建与预览
+
+```bash
+npm run build
+npm run preview
+```
+
+## 主要依赖
+
+- Vue 3 + TypeScript
+- Vite 7
+- Tailwind CSS
+- lightweight-charts、ECharts（部分组件）
