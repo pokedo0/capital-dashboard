@@ -11,8 +11,8 @@ services:
     environment:
       - DATABASE_URL=sqlite:////app/data/market.db
       - TZ=US/Eastern
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/time-ranges"]
       interval: 30s
