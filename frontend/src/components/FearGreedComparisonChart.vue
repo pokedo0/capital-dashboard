@@ -435,7 +435,7 @@ const indexLabel = computed(() => {
 </script>
 
 <template>
-  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4">
+  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 w-full">
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">Fear & Greed Index</div>

@@ -30,7 +30,7 @@ const formattedDate = computed(() => {
     </div>
     <div
       v-if="(variant ?? 'primary') === 'primary'"
-      class="mt-2 bg-accent text-3xl font-bold px-6 py-4 uppercase tracking-widest"
+      class="mt-2 bg-accent text-3xl font-bold px-6 py-4 uppercase tracking-widest whitespace-nowrap overflow-hidden text-ellipsis w-full"
     >
       {{ title }}
     </div>

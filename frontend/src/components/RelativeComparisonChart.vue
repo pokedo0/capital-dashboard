@@ -46,7 +46,7 @@ const extractValue = (point: unknown): number | undefined => {
 
 const measureSize = (element: HTMLElement) => {
   const rect = element.getBoundingClientRect();
-  const width = rect.width || element.clientWidth || element.offsetWidth || 600;
+  const width = rect.width || element.clientWidth || element.offsetWidth || 0;
   const height = rect.height || element.clientHeight || element.offsetHeight || 360;
   return { width, height };
 };
@@ -152,13 +152,13 @@ const benchmarkInput = computed({
 </script>
 
 <template>
-  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4">
+  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 w-full">
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl font-semibold uppercase">{{ selectedSymbol }} Relative {{ selectedBenchmark }}</div>
         <p class="text-sm text-textMuted">Price ratio (symbol / benchmark × 100) with 50-day average</p>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-3">
         <div>
           <input
             v-model="symbolInput"

@@ -20,7 +20,7 @@ const formatNumber = (value: number) => value.toFixed(2);
   <div class="bg-panel border border-white/10 rounded-xl p-4">
     <div class="text-xl font-semibold text-white uppercase tracking-wide mb-4">Sector ETFs</div>
     <div class="overflow-x-auto">
-      <table class="w-full text-left text-sm">
+      <table class="w-full text-left text-sm whitespace-nowrap">
         <thead class="text-textMuted uppercase tracking-wide text-xs">
           <tr>
             <th class="pb-2">Name</th>

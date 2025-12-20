@@ -54,7 +54,7 @@ const fullscreenHover = ref<HoverInfo>(null);
 const measureSize = (element: HTMLElement) => {
   const rect = element.getBoundingClientRect();
   return {
-    width: rect.width || element.clientWidth || element.offsetWidth || 720,
+    width: rect.width || element.clientWidth || element.offsetWidth || 0,
     height: rect.height || element.clientHeight || element.offsetHeight || 420,
   };
 };
@@ -337,7 +337,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4">
+  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 w-full">
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">S&P 500 - Forward PE Ratio</div>

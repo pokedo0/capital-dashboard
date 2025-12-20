@@ -54,9 +54,9 @@ const handleClearCache = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background text-white py-8">
-    <div class="mx-auto w-full max-w-[1500px] px-4 md:px-10 space-y-10">
-      <section class="flex flex-wrap items-start justify-between gap-4">
+  <div class="min-h-screen bg-background text-white py-8 overflow-x-auto">
+    <div class="mx-auto w-full min-w-[1200px] max-w-[1500px] px-2 md:px-10 space-y-10">
+      <section class="w-full">
         <MarketHeader
           title="Capital Dashboard"
           subtitle="S&P500 Dashboard"
