@@ -17,12 +17,13 @@ import { fetchRelativePerformance } from '../services/api';
 
 type LineSeries = ISeriesApi<'Line'>;
 
-const SYMBOLS = ['SPY', 'GLD', 'QQQ', 'BTC-USD'] as const;
+const SYMBOLS = ['SPY', 'GLD', 'SLV', 'QQQ', 'BTC-USD'] as const;
 type AssetSymbol = (typeof SYMBOLS)[number];
 const SYMBOL_PARAMS: string[] = [...SYMBOLS];
 const COLORS: Record<AssetSymbol, string> = {
   SPY: '#f87171',
   GLD: '#fde047',
+  SLV: '#94a3b8',
   QQQ: '#60a5fa',
   'BTC-USD': '#f97316',
 };
@@ -30,10 +31,11 @@ const COLORS: Record<AssetSymbol, string> = {
 const rangeKey = ref('1Y');
 const activeKeys = ref<string[]>([...SYMBOLS]);
 const showFullscreen = ref(false);
-const HISTOGRAM_SYMBOLS: AssetSymbol[] = ['SPY', 'GLD', 'QQQ', 'BTC-USD'];
+const HISTOGRAM_SYMBOLS: AssetSymbol[] = ['SPY', 'GLD', 'SLV', 'QQQ', 'BTC-USD'];
 const HISTOGRAM_LABELS: Record<AssetSymbol, string> = {
   SPY: 'SPY',
   GLD: 'GLD',
+  SLV: 'SLV',
   QQQ: 'QQQ',
   'BTC-USD': 'Bitcoin',
 };

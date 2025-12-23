@@ -58,7 +58,7 @@ const seriesData = computed(() => {
       let points = series.points;
       if (props.range === 'YTD') {
         points = points.filter((point) => new Date(point.time) >= cutoff);
-      } else if (props.range === '5Y' || props.range === '3Y') {
+      } else if (props.range === '5Y') {
         points = downsampleWeekly(points);
       }
       
