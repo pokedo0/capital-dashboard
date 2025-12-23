@@ -219,7 +219,6 @@ watch(
     const minValue = drawdownData.reduce((acc, point) => Math.min(acc, point.value ?? 0), 0);
     const step = 5;
     const lowerBound = Math.min(Math.floor(minValue / step) * step, -30);
-    axisLowerBound.value = lowerBound;
 
     fillAreaSeries.setData(drawdownData.map((point) => ({ time: point.time, value: 0 })));
     maskAreaSeries.setData(drawdownData);
@@ -245,14 +244,6 @@ watch(
 
 const currentDrawdown = computed(() => data.value?.current_drawdown ?? 0);
 const maxDrawdown = computed(() => data.value?.max_drawdown ?? 0);
-const axisLowerBound = ref(-40);
-const yAxisValues = computed(() => {
-  const values: number[] = [];
-  for (let value = 0; value >= axisLowerBound.value; value -= 5) {
-    values.push(value);
-  }
-  return values;
-});
 const symbolInput = computed({
   get: () => selectedSymbol.value,
   set: (val: string) => {
