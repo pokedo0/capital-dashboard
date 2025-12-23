@@ -307,7 +307,7 @@ const attachCrosshair = (
   <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 w-full">
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
-        <div class="text-xl text-white font-semibold uppercase">Asset Performance</div>
+        <div class="text-xl font-semibold uppercase" style="color: #67f0d6">Asset Performance</div>
       </div>
       <div class="flex items-center gap-3">
         <TimeRangeSelector v-model="rangeKey" :options="['1W', '1M', '3M', 'YTD', '1Y', '5Y']" />

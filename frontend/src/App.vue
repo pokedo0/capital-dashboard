@@ -7,6 +7,7 @@ import SectorTable from './components/SectorTable.vue';
 import Mag7RelativeChart from './components/Mag7RelativeChart.vue';
 import Mag7HistogramPerformance from './components/Mag7HistogramPerformance.vue';
 import MultiAssetComparisonChart from './components/MultiAssetComparisonChart.vue';
+import CustomAssetDashboard from './components/CustomAssetDashboard.vue';
 import DrawdownChart from './components/DrawdownChart.vue';
 import RelativeComparisonChart from './components/RelativeComparisonChart.vue';
 import FearGreedComparisonChart from './components/FearGreedComparisonChart.vue';
@@ -125,6 +126,7 @@ const handleClearCache = async () => {
         <FearGreedComparisonChart />
         <SpForwardPeChart />
         <MultiAssetComparisonChart />
+        <CustomAssetDashboard />
       </section>
 
       <section class="grid gap-6 xl:grid-cols-2">
