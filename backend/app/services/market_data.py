@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import json
 import logging
 import os
@@ -402,7 +402,7 @@ def _download_prices(symbols: List[str], label: str) -> pd.DataFrame:
             group_by="ticker",
             progress=False,
             threads=True,
-            auto_adjust=False,
+            auto_adjust=True,
             actions=False,
         )
     except Exception as exc:  # pragma: no cover - network/runtime issues
@@ -534,6 +534,16 @@ def get_sector_summary(session: Session) -> SectorSummaryResponse:
     for symbol, label in SECTOR_LABELS.items():
         ensure_history(session, symbol, resolve_range_start("1Y"), resolve_range_end())
         rows = _latest_two_records(session, symbol)
+
+        if len(rows) < 2:
+            logger.warning("Insufficient data for %s, forcing refresh of recent data", symbol)
+            from sqlmodel import Session as NewSession
+            from ..db import engine
+            with NewSession(engine) as write_session:
+                # Fetch last 7 days to ensure we get at least 2 trading days
+                fetch_and_store(write_session, symbol, resolve_range_end() - timedelta(days=7), resolve_range_end())
+            rows = _latest_two_records(session, symbol)
+
         if len(rows) < 2 or rows[0].close is None or rows[1].close is None:
             continue
         change_pct = ((rows[0].close - rows[1].close) / rows[1].close) * 100 if rows[1].close else 0

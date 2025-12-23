@@ -26,7 +26,7 @@ def _download(symbol: str, start: date, end: date) -> pd.DataFrame:
         start=start.isoformat(),
         end=yf_end.isoformat(),
         progress=False,
-        auto_adjust=False,
+        auto_adjust=True,
         actions=False,
         group_by="column",
         threads=False,
