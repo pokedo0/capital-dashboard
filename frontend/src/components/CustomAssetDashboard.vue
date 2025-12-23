@@ -23,7 +23,7 @@ const symbols = ref<string[]>([]);
 const hiddenSymbols = ref<Set<string>>(new Set());
 const inputSymbol = ref('');
 const rangeKey = ref('1M');
-const rangeOptions = ['1W', '1M', '3M', '6M', 'YTD', '1Y', '3Y'];
+const rangeOptions = ['1W', '1M', '3M', 'YTD', '1Y', '3Y'];
 
 // Initialize from local storage or default
 onMounted(() => {
