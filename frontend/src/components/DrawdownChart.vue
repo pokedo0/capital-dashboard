@@ -76,6 +76,7 @@ const initChart = () => {
       fontFamily: "'IBM Plex Sans', Inter, ui-sans-serif",
     },
     leftPriceScale: {
+      visible: true,
       borderVisible: false,
       autoScale: true,
       scaleMargins: { top: 0.05, bottom: 0.05 },
@@ -96,8 +97,7 @@ const initChart = () => {
   chart.applyOptions({ width: size.width, height: size.height });
   chart.priceScale('left').applyOptions({
     borderVisible: false,
-    scaleMargins: { top: 0.02, bottom: 0.02 },
-    entireTextOnly: true,
+    scaleMargins: { top: 0.05, bottom: 0.05 },
   });
 
   fillAreaSeries = chart.addSeries(AreaSeriesDefinition, {
@@ -292,12 +292,8 @@ const symbolInput = computed({
         <TimeRangeSelector v-model="rangeKey" />
       </div>
     </div>
-    <div class="flex w-full min-h-[360px] gap-3">
-      <div class="w-14 flex flex-col justify-between text-xs text-textMuted pr-2 py-1">
-        <span v-for="value in yAxisValues" :key="value">{{ value.toFixed(0) }}%</span>
-      </div>
-      <div class="relative flex-1 w-full aspect-[4/3] md:aspect-auto md:min-h-[360px]">
-        <div ref="chartContainer" class="absolute inset-0"></div>
+    <div class="relative w-full aspect-[4/3] md:aspect-auto md:min-h-[360px] flex-1">
+      <div ref="chartContainer" class="absolute inset-0"></div>
         <div
         v-if="hoverInfo"
         class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50 shadow-lg"
@@ -321,7 +317,6 @@ const symbolInput = computed({
           </span>
           <span>{{ hoverInfo.price?.toFixed(2) ?? '--' }}</span>
         </div>
-      </div>
     </div>
     </div>
     <div class="text-xs uppercase tracking-wide flex gap-4 text-textMuted">
