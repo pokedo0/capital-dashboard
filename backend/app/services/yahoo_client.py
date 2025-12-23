@@ -44,17 +44,16 @@ def _safe_float(value: Optional[float]) -> Optional[float]:
     return float(value) if value is not None and pd.notna(value) else None
 
 
-def fetch_and_store(session: Session, symbol: str, start: date, end: date) -> List[PriceRecord]:
+def fetch_and_store(session: Session, symbol: str, start: date, end: date) -> None:
     try:
         df = _download(symbol, start, end)
     except Exception as exc:  # pragma: no cover - network/runtime errors
         logger.warning("Failed to download %s: %s", symbol, exc)
-        return []
+        return
     if df.empty:
         logger.warning("Yahoo returned empty frame for %s (%s -> %s)", symbol, start, end)
-        return []
+        return
 
-    records: List[PriceRecord] = []
     for index, row in df.iterrows():
         trade_date = index.date()
         existing = session.get(PriceRecord, (symbol, trade_date))
@@ -64,9 +63,8 @@ def fetch_and_store(session: Session, symbol: str, start: date, end: date) -> Li
             existing.low = _safe_float(row.get("Low"))
             existing.close = _safe_float(row.get("Close"))
             existing.volume = _safe_float(row.get("Volume"))
-            target = existing
         else:
-            target = PriceRecord(
+            new_record = PriceRecord(
                 symbol=symbol,
                 trade_date=trade_date,
                 open=_safe_float(row.get("Open")),
@@ -75,8 +73,6 @@ def fetch_and_store(session: Session, symbol: str, start: date, end: date) -> Li
                 close=_safe_float(row.get("Close")),
                 volume=_safe_float(row.get("Volume")),
             )
-            session.add(target)
-        records.append(target)
+            session.add(new_record)
 
     session.commit()
-    return records

@@ -62,13 +62,23 @@ ALT_NASDAQ100_CONSTITUENTS_URL = "https://raw.githubusercontent.com/pokedo0/inde
 
 
 def ensure_history(session: Session, symbol: str, start: date, end: date) -> None:
+    # 1. 快速检查（只读）
     result = session.exec(
         select(func.min(PriceRecord.trade_date), func.max(PriceRecord.trade_date)).where(
             PriceRecord.symbol == symbol
         )
     ).first()
+    
+    # 2. 如果数据缺失，则启动一个全新的独立会话进行写入
     if not result or result[0] is None or result[0] > start or result[1] is None or result[1] < end:
-        fetch_and_store(session, symbol, start, end)
+        # 使用独立的 Engine 连接创建临时的 Session，确保事务隔离
+        # 避免在此处复用传入的 `session`，防止 SQLite 锁定或事务状态污染
+        from sqlmodel import Session as NewSession
+        from ..db import engine
+        
+        with NewSession(engine) as write_session:
+            fetch_and_store(write_session, symbol, start, end)
+            # fetch_and_store 内部负责 commit，这里无需再次操作
 
 
 def _load_price_records(session: Session, symbol: str, start: date, end: date) -> List[PriceRecord]:
@@ -121,7 +131,7 @@ def get_relative_performance(session: Session, symbols: List[str], range_key: st
         if not records:
             continue
         first_close = next((r.close for r in records if r.close), None)
-        if not first_close:
+        if not first_close or first_close == 0:
             continue
         series = []
         for record in records:
