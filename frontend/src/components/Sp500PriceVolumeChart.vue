@@ -142,7 +142,7 @@ const chartOptions: DeepPartial<ChartOptions> = {
     alignLabels: true,
   },
   leftPriceScale: {
-    visible: true,
+    visible: false,
     borderVisible: false,
     alignLabels: true,
   },
