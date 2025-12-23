@@ -296,7 +296,7 @@ const symbolInput = computed({
       <div class="w-14 flex flex-col justify-between text-xs text-textMuted pr-2 py-1">
         <span v-for="value in yAxisValues" :key="value">{{ value.toFixed(0) }}%</span>
       </div>
-      <div class="relative flex-1 min-h-[360px]">
+      <div class="relative flex-1 w-full aspect-[4/3] md:aspect-auto md:min-h-[360px]">
         <div ref="chartContainer" class="absolute inset-0"></div>
         <div
         v-if="hoverInfo"

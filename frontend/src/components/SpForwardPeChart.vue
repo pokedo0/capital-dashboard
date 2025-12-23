@@ -356,7 +356,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div class="relative flex-1 w-full min-h-[360px]">
+    <div class="relative flex-1 w-full aspect-[4/3] md:aspect-auto md:min-h-[360px]">
       <div ref="containerRef" class="absolute inset-0" />
       <div
         v-if="hoverInfo"

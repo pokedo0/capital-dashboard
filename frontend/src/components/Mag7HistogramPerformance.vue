@@ -56,8 +56,8 @@ let chart: echarts.ECharts | null = null;
 const queryRange = computed(() => (rangeKey.value === 'YTD' ? '1Y' : rangeKey.value));
 
 const { data, refetch } = useQuery({
-  queryKey: computed(() => ['mag7-histogram', rangeKey.value]),
-  queryFn: () => fetchRelativePerformance([...EXTENDED_SYMBOLS], queryRange.value),
+  queryKey: computed(() => ['relative', 'mag7-group', rangeKey.value]),
+  queryFn: () => fetchRelativePerformance([...EXTENDED_SYMBOLS], rangeKey.value),
 });
 
 watch(rangeKey, () => refetch());
@@ -95,10 +95,16 @@ const renderChart = () => {
     window.addEventListener('resize', resizeChart);
   }
   const payload = seriesData.value;
-  const option = {
-    grid: { left: 50, right: 40, top: 30, bottom: 40, containLabel: true },
-    xAxis: {
-      type: 'category',
+    const isMobile = window.innerWidth < 768;
+    const option = {
+      grid: {
+        left: isMobile ? 10 : 50,
+        right: isMobile ? 10 : 40,
+        top: 30,
+        bottom: 40,
+        containLabel: true,
+      },
+      xAxis: {      type: 'category',
       data: payload.map((item) => item.label),
       axisLabel: { color: '#f8fafc', margin: 10, interval: 0 },
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.2)' } },
@@ -165,7 +171,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 h-full w-full">
+  <div class="bg-panel border border-white/10 rounded-xl p-2 md:p-4 flex flex-col gap-4 h-full w-full">
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">Mag 7 Histogram Performance</div>
@@ -192,6 +198,6 @@ onBeforeUnmount(() => {
         <TimeRangeSelector v-model="rangeKey" :options="rangeOptions" />
       </div>
     </div>
-    <div ref="chartRef" class="w-full flex-1 min-h-[420px]"></div>
+    <div ref="chartRef" class="w-full flex-1 aspect-[4/3] md:aspect-auto md:min-h-[420px]"></div>
   </div>
 </template>

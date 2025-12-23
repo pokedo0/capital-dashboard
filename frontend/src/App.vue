@@ -54,8 +54,8 @@ const handleClearCache = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background text-white py-8 overflow-x-auto">
-    <div class="mx-auto w-full min-w-[550px] max-w-[1500px] px-2 md:px-10 space-y-10">
+  <div class="min-h-screen bg-background text-white py-8">
+    <div class="mx-auto w-full max-w-[1500px] px-2 md:px-10 space-y-10">
       <section class="w-full">
         <MarketHeader
           title="Capital Dashboard"
@@ -83,7 +83,7 @@ const handleClearCache = async () => {
         </MarketHeader>
       </section>
 
-      <section class="grid gap-6 xl:grid-cols-[2fr,1fr]">
+      <section class="grid gap-6 xl:grid-cols-[2fr,1fr] xl:items-stretch items-start">
         <Sp500PriceVolumeChart />
         <SectorTable />
       </section>

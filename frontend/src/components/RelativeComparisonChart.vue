@@ -181,12 +181,11 @@ const benchmarkInput = computed({
             <option v-for="bm in BENCHMARKS" :key="bm" :value="bm" />
           </datalist>
         </div>
-        <TimeRangeSelector v-model="rangeKey" :options="['6M', '1Y', '2Y']" />
-      </div>
-    </div>
-    <div class="relative w-full flex-1 min-h-[360px]">
-      <div ref="chartContainer" class="absolute inset-0"></div>
-      <div
+                <TimeRangeSelector v-model="rangeKey" :options="['6M', '1Y', '2Y']" />     
+              </div>
+            </div>
+            <div class="relative w-full flex-1 aspect-[4/3] md:aspect-auto md:min-h-[360px]">
+              <div ref="chartContainer" class="absolute inset-0"></div>      <div
         v-if="hoverInfo"
         class="absolute bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white pointer-events-none z-50"
         :style="{ left: `calc(${hoverInfo.position.x}px + 12px)`, top: `calc(${hoverInfo.position.y}px - 40px)` }"

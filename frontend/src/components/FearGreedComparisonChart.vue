@@ -465,7 +465,7 @@ const indexLabel = computed(() => {
         <span class="text-red-400 font-semibold text-base">{{ indexLabel }}</span>
       </span>
     </div>
-    <div class="relative flex-1 w-full min-h-[360px]">
+    <div class="relative flex-1 w-full aspect-[4/3] md:aspect-auto md:min-h-[360px]">
       <div ref="mainContainer" class="absolute inset-0"></div>
       <div ref="mainOverlay" class="pointer-events-none absolute inset-0 z-10">
         <div

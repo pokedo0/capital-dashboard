@@ -61,8 +61,8 @@ const activeKeys = ref<string[]>([...displayedSymbols.value]);
 const showFullscreen = ref(false);
 
 const { data, refetch } = useQuery({
-  queryKey: computed(() => ['relative', 'mag7', rangeKey.value]),
-  queryFn: () => fetchRelativePerformance(SYMBOL_PARAMS, rangeKey.value),
+  queryKey: computed(() => ['relative', 'mag7-group', rangeKey.value]),
+  queryFn: () => fetchRelativePerformance([...EXTENDED_SYMBOLS], rangeKey.value),
 });
 
 const transformedData = computed(() => {
@@ -352,7 +352,7 @@ const attachCrosshair = (
         </button>
       </div>
     </div>
-    <div class="relative flex-1 w-full min-h-[360px]">
+    <div class="relative flex-1 w-full aspect-[4/3] md:aspect-auto md:min-h-[360px]">
       <div ref="mainContainer" class="absolute inset-0"></div>
       <div
         v-if="hoverInfo"
