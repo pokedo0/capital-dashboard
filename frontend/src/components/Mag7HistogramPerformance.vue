@@ -53,7 +53,7 @@ const displayedSymbols = computed(() =>
 const chartRef = ref<HTMLDivElement | null>(null);
 let chart: echarts.ECharts | null = null;
 
-const queryRange = computed(() => (rangeKey.value === 'YTD' ? '1Y' : rangeKey.value));
+// unused: const queryRange = computed(() => (rangeKey.value === 'YTD' ? '1Y' : rangeKey.value));
 
 const { data, refetch } = useQuery({
   queryKey: computed(() => ['relative', 'mag7-group', rangeKey.value]),

@@ -12,10 +12,7 @@ const props = defineProps<{
 }>();
 
 // Map symbol to color based on index
-const getColor = (symbol: string) => {
-  const index = props.symbols.indexOf(symbol);
-  return index >= 0 ? props.colors[index % props.colors.length] : '#ffffff';
-};
+// Removed unused variables getColor and isMobile
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const downsampleWeekly = (points: { time: string; value: number }[]) => {
@@ -95,7 +92,7 @@ const renderChart = () => {
   }
   
   const payload = seriesData.value;
-  const isMobile = window.innerWidth < 768;
+  // unused: const isMobile = window.innerWidth < 768;
   
   const option = {
     grid: {

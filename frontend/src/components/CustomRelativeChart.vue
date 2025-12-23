@@ -303,7 +303,7 @@ const attachCrosshair = (
         const value = param.seriesData.get(series);
         return {
           label: symbol,
-          color: getColor(symbol),
+          color: getColor(symbol) ?? '#ffffff',
           value: extractValue(value),
         };
       })

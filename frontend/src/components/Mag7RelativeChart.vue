@@ -18,7 +18,7 @@ type LineSeries = ISeriesApi<'Line'>;
 const BASE_SYMBOLS = ['NVDA', 'GOOG', 'AMZN', 'AAPL', 'META', 'MSFT', 'TSLA', '^NDX'] as const;
 const EXTENDED_SYMBOLS = [...BASE_SYMBOLS, 'AVGO', 'TSM'] as const;
 type SymbolKey = (typeof EXTENDED_SYMBOLS)[number];
-const SYMBOL_PARAMS: string[] = [...EXTENDED_SYMBOLS];
+// unused: const SYMBOL_PARAMS: string[] = [...EXTENDED_SYMBOLS];
 const COLOR_MAP: Record<SymbolKey, string> = {
   NVDA: '#9edc2f',
   GOOG: '#f5c242',

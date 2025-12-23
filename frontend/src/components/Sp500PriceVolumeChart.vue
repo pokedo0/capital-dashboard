@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import {
   CrosshairMode,
   HistogramSeries as HistogramSeriesDefinition,
@@ -277,23 +277,7 @@ watch(activeKeys, () => {
   syncVisibility(fullscreenBundle.value);
 });
 
-const openFullscreen = async () => {
-  showFullscreen.value = true;
-  await nextTick();
-  if (fullscreenContainer.value) {
-    fullscreenBundle.value = createBundle(fullscreenContainer.value);
-    if (priceSeriesData.value.length) {
-      applyData(
-        fullscreenBundle.value,
-        priceSeriesData.value,
-        averageSeriesData.value,
-        volumeSeriesData.value,
-        fullscreenHoverInfo,
-        'fullscreen',
-      );
-    }
-  }
-};
+// unused: const openFullscreen = async () => ...
 
 watch(showFullscreen, (open) => {
   if (!open) {
