@@ -5,6 +5,7 @@ services:
 #    build:
 #      context: ./backend
     image: ghcr.io/pokedo0/capital-dashboard:backend-latest
+    pull_policy: always
     container_name: capital-backend
     restart: unless-stopped
     volumes:
@@ -26,6 +27,7 @@ services:
 #      args:
 #        VITE_API_BASE_URL: /api
     image: ghcr.io/pokedo0/capital-dashboard:frontend-latest
+    pull_policy: always
     container_name: capital-frontend
     restart: unless-stopped
     expose:
