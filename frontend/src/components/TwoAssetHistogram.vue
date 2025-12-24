@@ -27,7 +27,13 @@ const renderChart = () => {
     xAxis: {
       type: 'category',
       data: props.bars.map((bar) => bar.symbol),
-      axisLabel: { color: '#f8fafc', fontSize: 12 },
+      axisLabel: { 
+        color: '#f8fafc', 
+        fontSize: window.innerWidth < 768 ? 10 : 12,
+        interval: 0,
+        rotate: 0,
+        hideOverlap: false
+      },
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.2)' } },
     },
     yAxis: {
