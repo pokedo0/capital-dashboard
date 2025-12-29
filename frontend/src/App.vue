@@ -7,13 +7,14 @@ import SectorTable from './components/SectorTable.vue';
 import Mag7RelativeChart from './components/Mag7RelativeChart.vue';
 import Mag7HistogramPerformance from './components/Mag7HistogramPerformance.vue';
 import MultiAssetComparisonChart from './components/MultiAssetComparisonChart.vue';
+import SectorComparisonChart from './components/SectorComparisonChart.vue';
 import CustomAssetDashboard from './components/CustomAssetDashboard.vue';
 import DrawdownChart from './components/DrawdownChart.vue';
 import RelativeComparisonChart from './components/RelativeComparisonChart.vue';
 import FearGreedComparisonChart from './components/FearGreedComparisonChart.vue';
 import MarketBreadthChart from './components/MarketBreadthChart.vue';
 import SpForwardPeChart from './components/SpForwardPeChart.vue';
-import { clearApiCache, fetchMarketSummary } from './services/api';
+import { clearApiCache, fetchRealtimeMarketSummary } from './services/api';
 import { ref } from 'vue';
 
 const nasdaqBreadthOptions = [
@@ -28,14 +29,17 @@ const spBreadthOptions = [
   { value: '$S5TH', label: '$S5TH Above 200-Day' },
 ];
 
+// Using realtime API with 5-minute TTL cache
 const { data: sp500Summary } = useQuery({
-  queryKey: ['market', 'sp500'],
-  queryFn: () => fetchMarketSummary('sp500'),
+  queryKey: ['market', 'realtime', 'sp500'],
+  queryFn: () => fetchRealtimeMarketSummary('sp500'),
+  refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
 });
 
 const { data: nasdaqSummary } = useQuery({
-  queryKey: ['market', 'nasdaq'],
-  queryFn: () => fetchMarketSummary('nasdaq'),
+  queryKey: ['market', 'realtime', 'nasdaq'],
+  queryFn: () => fetchRealtimeMarketSummary('nasdaq'),
+  refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
 });
 
 const queryClient = useQueryClient();
@@ -126,6 +130,7 @@ const handleClearCache = async () => {
         <FearGreedComparisonChart />
         <SpForwardPeChart />
         <MultiAssetComparisonChart />
+        <SectorComparisonChart />
         <CustomAssetDashboard />
       </section>
 

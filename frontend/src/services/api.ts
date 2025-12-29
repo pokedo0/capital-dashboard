@@ -111,6 +111,19 @@ export const fetchMarketBreadth = async (
   return data;
 };
 
+// ============ Realtime APIs (5-minute TTL) ============
+
+export const fetchRealtimeMarketSummary = async (market: string): Promise<MarketSummary> => {
+  const { data } = await api.get<MarketSummary>('market/realtime-summary', { params: { market } });
+  return data;
+};
+
+export const fetchRealtimeSectorSummary = async (): Promise<SectorSummaryResponse> => {
+  const { data } = await api.get<SectorSummaryResponse>('sectors/realtime-summary');
+  return data;
+};
+
 export const clearApiCache = async (): Promise<void> => {
   await api.post('cache/clear');
 };
+

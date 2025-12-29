@@ -23,7 +23,7 @@ const renderChart = () => {
     window.addEventListener('resize', resizeChart);
   }
   const option = {
-    grid: { top: 30, left: 20, right: 10, bottom: 40, containLabel: true },
+    grid: { top: 30, left: 20, right: 10, bottom: 20, containLabel: true },
     xAxis: {
       type: 'category',
       data: props.bars.map((bar) => bar.symbol),
@@ -106,6 +106,6 @@ onBeforeUnmount(() => {
     <div v-if="!bare && title" class="text-lg text-accentCyan font-semibold uppercase">
       {{ title }}
     </div>
-    <div ref="chartRef" class="w-full flex-1 min-h-[320px]"></div>
+    <div ref="chartRef" class="w-full flex-1 min-h-[200px]"></div>
   </div>
 </template>

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { fetchSectorSummary } from '../services/api';
+import { fetchRealtimeSectorSummary } from '../services/api';
 
+// Using realtime API with 5-minute TTL cache
 const { data } = useQuery({
-  queryKey: ['sectors'],
-  queryFn: () => fetchSectorSummary(),
+  queryKey: ['sectors', 'realtime'],
+  queryFn: () => fetchRealtimeSectorSummary(),
+  refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
 });
 
 const sortedSectors = computed(() => {

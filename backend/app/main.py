@@ -33,9 +33,13 @@ from .services.market_data import (
 )
 from .services.breadth import get_market_breadth_series
 from .services.forward_pe import get_forward_pe_comparison
+from .services.realtime import get_realtime_market_summary, get_realtime_sector_summary
 from .services.time_ranges import RANGE_TO_DAYS
 from .services.yahoo_client import fetch_and_store
 from .utils.cache import TTLCache
+
+# Realtime cache TTL: 5 minutes (300 seconds)
+REALTIME_CACHE_TTL = 300
 
 LOGGING_CONFIG = {
     "version": 1,
@@ -77,6 +81,10 @@ fear_greed_cache: TTLCache[FearGreedResponse] = TTLCache(settings.cache_ttl_seco
 breadth_cache: TTLCache[MarketBreadthResponse] = TTLCache(settings.cache_ttl_seconds)
 forward_pe_cache: TTLCache[ForwardPeResponse] = TTLCache(settings.cache_ttl_seconds)
 
+# Realtime caches with 5-minute TTL
+realtime_market_cache: TTLCache[MarketSummary] = TTLCache(REALTIME_CACHE_TTL)
+realtime_sector_cache: TTLCache[SectorSummaryResponse] = TTLCache(REALTIME_CACHE_TTL)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -107,6 +115,8 @@ def clear_all_caches(source: str = "unknown") -> None:
     breadth_cache.clear()
     forward_pe_cache.clear()
     price_series_cache.clear()
+    realtime_market_cache.clear()
+    realtime_sector_cache.clear()
 
 
 def daily_refresh_job() -> None:
@@ -304,3 +314,26 @@ def api_forward_pe(
 def api_clear_cache() -> dict:
     clear_all_caches(source="api")
     return {"status": "ok"}
+
+
+# ============ Realtime APIs (5-minute TTL) ============
+
+@app.get("/api/market/realtime-summary", response_model=MarketSummary)
+def api_realtime_market_summary(
+    market: str = Query("sp500")
+) -> MarketSummary:
+    """Get realtime market summary with live quotes (5-min cache)."""
+    key = market.lower()
+    try:
+        return realtime_market_cache.get_or_set(key, lambda: get_realtime_market_summary(market))
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.get("/api/sectors/realtime-summary", response_model=SectorSummaryResponse)
+def api_realtime_sector_summary() -> SectorSummaryResponse:
+    """Get realtime sector ETF summary with live quotes (5-min cache)."""
+    try:
+        return realtime_sector_cache.get_or_set("sectors", lambda: get_realtime_sector_summary())
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
