@@ -14,6 +14,7 @@ import RelativeComparisonChart from './components/RelativeComparisonChart.vue';
 import FearGreedComparisonChart from './components/FearGreedComparisonChart.vue';
 import MarketBreadthChart from './components/MarketBreadthChart.vue';
 import SpForwardPeChart from './components/SpForwardPeChart.vue';
+import SpyRspRatioChart from './components/SpyRspRatioChart.vue';
 import { clearApiCache, fetchRealtimeMarketSummary } from './services/api';
 import { ref } from 'vue';
 
@@ -128,7 +129,10 @@ const handleClearCache = async () => {
 
       <section class="space-y-6">
         <FearGreedComparisonChart />
-        <SpForwardPeChart />
+        <div class="grid gap-6 xl:grid-cols-2">
+          <SpForwardPeChart />
+          <SpyRspRatioChart />
+        </div>
         <MultiAssetComparisonChart />
         <SectorComparisonChart />
         <CustomAssetDashboard />

@@ -19,6 +19,7 @@ from .schemas.market import (
     RelativeToResponse,
     SectorSummaryResponse,
     SeriesPayload,
+    SpyRspRatioResponse,
 )
 from .services.market_data import (
     get_daily_performance,
@@ -33,6 +34,7 @@ from .services.market_data import (
 )
 from .services.breadth import get_market_breadth_series
 from .services.forward_pe import get_forward_pe_comparison
+from .services.spy_rsp_ratio import get_spy_rsp_ratio
 from .services.realtime import get_realtime_market_summary, get_realtime_sector_summary
 from .services.time_ranges import RANGE_TO_DAYS
 from .services.yahoo_client import fetch_and_store
@@ -80,6 +82,7 @@ relative_to_cache: TTLCache[RelativeToResponse] = TTLCache(settings.cache_ttl_se
 fear_greed_cache: TTLCache[FearGreedResponse] = TTLCache(settings.cache_ttl_seconds)
 breadth_cache: TTLCache[MarketBreadthResponse] = TTLCache(settings.cache_ttl_seconds)
 forward_pe_cache: TTLCache[ForwardPeResponse] = TTLCache(settings.cache_ttl_seconds)
+spy_rsp_cache: TTLCache[SpyRspRatioResponse] = TTLCache(settings.cache_ttl_seconds)
 
 # Realtime caches with 5-minute TTL
 realtime_market_cache: TTLCache[MarketSummary] = TTLCache(REALTIME_CACHE_TTL)
@@ -114,6 +117,7 @@ def clear_all_caches(source: str = "unknown") -> None:
     fear_greed_cache.clear()
     breadth_cache.clear()
     forward_pe_cache.clear()
+    spy_rsp_cache.clear()
     price_series_cache.clear()
     realtime_market_cache.clear()
     realtime_sector_cache.clear()
@@ -305,6 +309,19 @@ def api_forward_pe(
     try:
         return forward_pe_cache.get_or_set(
             cache_key, lambda: get_forward_pe_comparison(session, range_key)
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/market/spy-rsp-ratio", response_model=SpyRspRatioResponse)
+def api_spy_rsp_ratio(
+    range_key: str = Query("1Y", alias="range"), session: Session = Depends(get_session)
+) -> SpyRspRatioResponse:
+    cache_key = range_key.upper()
+    try:
+        return spy_rsp_cache.get_or_set(
+            cache_key, lambda: get_spy_rsp_ratio(session, range_key)
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

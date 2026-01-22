@@ -10,6 +10,7 @@ import type {
   RelativeToResponse,
   SectorSummaryResponse,
   SeriesPayload,
+  SpyRspRatioResponse,
 } from '../types/api';
 
 const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
@@ -95,6 +96,15 @@ export const fetchForwardPeComparison = async (
   range = '1Y',
 ): Promise<ForwardPeResponse> => {
   const { data } = await api.get<ForwardPeResponse>('market/forward-pe', {
+    params: { range },
+  });
+  return data;
+};
+
+export const fetchSpyRspRatio = async (
+  range = '1Y',
+): Promise<SpyRspRatioResponse> => {
+  const { data } = await api.get<SpyRspRatioResponse>('market/spy-rsp-ratio', {
     params: { range },
   });
   return data;

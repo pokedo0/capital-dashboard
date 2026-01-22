@@ -11,6 +11,7 @@ import {
   LineSeries as LineSeriesDefinition,
   createChart,
   PriceScaleMode,
+  LineStyle,
   type IChartApi,
   type ISeriesApi,
   type MouseEventParams,
@@ -20,17 +21,24 @@ import {
 import { useQuery } from "@tanstack/vue-query";
 import TimeRangeSelector from "./TimeRangeSelector.vue";
 import FullscreenModal from "./FullscreenModal.vue";
-import { fetchForwardPeComparison } from "../services/api";
+import { fetchSpyRspRatio } from "../services/api";
 
 type LineSeries = ISeriesApi<"Line">;
 
-const rangeOptions = ["6M", "YTD", "1Y", "5Y"];
+const rangeOptions = ["6M", "YTD", "1Y", "3Y", "5Y"];
 const rangeKey = ref("1Y");
 const showFullscreen = ref(false);
 
+// Threshold line at 3.5
+const THRESHOLD_LINE = {
+  value: 3.5,
+  label: "Threshold",
+  color: "#2b228c",
+} as const;
+
 const { data, refetch } = useQuery({
-  queryKey: computed(() => ["forward-pe", rangeKey.value]),
-  queryFn: () => fetchForwardPeComparison(rangeKey.value),
+  queryKey: computed(() => ["spy-rsp-ratio", rangeKey.value]),
+  queryFn: () => fetchSpyRspRatio(rangeKey.value),
 });
 
 watch(rangeKey, () => refetch());
@@ -38,21 +46,21 @@ watch(rangeKey, () => refetch());
 const containerRef = ref<HTMLDivElement | null>(null);
 const fullscreenContainerRef = ref<HTMLDivElement | null>(null);
 let chart: IChartApi | null = null;
-let peSeries: LineSeries | null = null;
-let spxSeries: LineSeries | null = null;
+let ratioSeries: LineSeries | null = null;
+let magsSeries: LineSeries | null = null;
 let observer: ResizeObserver | null = null;
 let crosshairHandler: ((param: MouseEventParams) => void) | null = null;
 let fullscreenChart: IChartApi | null = null;
-let fullscreenPeSeries: LineSeries | null = null;
-let fullscreenSpxSeries: LineSeries | null = null;
+let fullscreenRatioSeries: LineSeries | null = null;
+let fullscreenMagsSeries: LineSeries | null = null;
 let fullscreenObserver: ResizeObserver | null = null;
 let fullscreenCrosshairHandler: ((param: MouseEventParams) => void) | null =
   null;
 
 type HoverInfo = {
   time: string;
-  pe?: number;
-  spx?: number;
+  ratio?: number;
+  mags?: number;
   position: { x: number; y: number };
 } | null;
 
@@ -117,8 +125,8 @@ const disposeChart = () => {
   }
   chart?.remove();
   chart = null;
-  peSeries = null;
-  spxSeries = null;
+  ratioSeries = null;
+  magsSeries = null;
   crosshairHandler = null;
   hoverInfo.value = null;
 };
@@ -131,8 +139,8 @@ const disposeFullscreen = () => {
   }
   fullscreenChart?.remove();
   fullscreenChart = null;
-  fullscreenPeSeries = null;
-  fullscreenSpxSeries = null;
+  fullscreenRatioSeries = null;
+  fullscreenMagsSeries = null;
   fullscreenCrosshairHandler = null;
   fullscreenHover.value = null;
 };
@@ -169,20 +177,31 @@ const initChart = () => {
   });
   chart.applyOptions({ width: size.width, height: size.height });
 
-  peSeries = chart.addSeries(LineSeriesDefinition, {
+  ratioSeries = chart.addSeries(LineSeriesDefinition, {
     color: "#f04949",
     lineWidth: 2,
     priceLineVisible: false,
     priceScaleId: "left",
     lastValueVisible: true,
   });
-  peSeries.applyOptions({
+  ratioSeries.applyOptions({
     priceFormat: {
       type: "custom",
-      formatter: (value: number) => value.toFixed(2),
+      formatter: (value: number) => value.toFixed(3),
     },
   });
-  spxSeries = chart.addSeries(LineSeriesDefinition, {
+
+  // Add threshold line at 3.5
+  ratioSeries.createPriceLine({
+    price: THRESHOLD_LINE.value,
+    color: THRESHOLD_LINE.color,
+    lineWidth: 1,
+    lineStyle: LineStyle.Dashed,
+    axisLabelVisible: true,
+    title: THRESHOLD_LINE.label,
+  });
+
+  magsSeries = chart.addSeries(LineSeriesDefinition, {
     color: "#bdc3c7",
     lineWidth: 2,
     priceLineVisible: false,
@@ -199,16 +218,16 @@ const initChart = () => {
   observer.observe(containerRef.value);
 
   crosshairHandler = (param: MouseEventParams) => {
-    if (!param.time || !param.point || !peSeries || !spxSeries) {
+    if (!param.time || !param.point || !ratioSeries || !magsSeries) {
       hoverInfo.value = null;
       return;
     }
-    const pePoint = param.seriesData.get(peSeries);
-    const spxPoint = param.seriesData.get(spxSeries);
+    const ratioPoint = param.seriesData.get(ratioSeries);
+    const magsPoint = param.seriesData.get(magsSeries);
     hoverInfo.value = {
       time: formatTime(param.time),
-      pe: extractValue(pePoint),
-      spx: extractValue(spxPoint),
+      ratio: extractValue(ratioPoint),
+      mags: extractValue(magsPoint),
       position: { x: param.point.x, y: param.point.y },
     };
   };
@@ -247,20 +266,31 @@ const initFullscreenChart = () => {
   });
   fullscreenChart.applyOptions({ width: size.width, height: size.height });
 
-  fullscreenPeSeries = fullscreenChart.addSeries(LineSeriesDefinition, {
+  fullscreenRatioSeries = fullscreenChart.addSeries(LineSeriesDefinition, {
     color: "#f04949",
     lineWidth: 2,
     priceLineVisible: false,
     priceScaleId: "left",
     lastValueVisible: true,
   });
-  fullscreenPeSeries.applyOptions({
+  fullscreenRatioSeries.applyOptions({
     priceFormat: {
       type: "custom",
-      formatter: (value: number) => value.toFixed(2),
+      formatter: (value: number) => value.toFixed(3),
     },
   });
-  fullscreenSpxSeries = fullscreenChart.addSeries(LineSeriesDefinition, {
+
+  // Add threshold line at 3.5
+  fullscreenRatioSeries.createPriceLine({
+    price: THRESHOLD_LINE.value,
+    color: THRESHOLD_LINE.color,
+    lineWidth: 1,
+    lineStyle: LineStyle.Dashed,
+    axisLabelVisible: true,
+    title: THRESHOLD_LINE.label,
+  });
+
+  fullscreenMagsSeries = fullscreenChart.addSeries(LineSeriesDefinition, {
     color: "#bdc3c7",
     lineWidth: 2,
     priceLineVisible: false,
@@ -283,18 +313,18 @@ const initFullscreenChart = () => {
     if (
       !param.time ||
       !param.point ||
-      !fullscreenPeSeries ||
-      !fullscreenSpxSeries
+      !fullscreenRatioSeries ||
+      !fullscreenMagsSeries
     ) {
       fullscreenHover.value = null;
       return;
     }
-    const pePoint = param.seriesData.get(fullscreenPeSeries);
-    const spxPoint = param.seriesData.get(fullscreenSpxSeries);
+    const ratioPoint = param.seriesData.get(fullscreenRatioSeries);
+    const magsPoint = param.seriesData.get(fullscreenMagsSeries);
     fullscreenHover.value = {
       time: formatTime(param.time),
-      pe: extractValue(pePoint),
-      spx: extractValue(spxPoint),
+      ratio: extractValue(ratioPoint),
+      mags: extractValue(magsPoint),
       position: { x: param.point.x, y: param.point.y },
     };
   };
@@ -308,16 +338,12 @@ watch(
     if (!chart) {
       initChart();
     }
-    if (!chart || !peSeries || !spxSeries) return;
-    // 数据已在后端按交易日对齐，这里不再降采样，避免 hover 缺口
-    peSeries.setData(
-      payload.forward_pe.map((point) => ({
-        time: point.time,
-        value: point.value,
-      })),
+    if (!chart || !ratioSeries || !magsSeries) return;
+    ratioSeries.setData(
+      payload.ratio.map((point) => ({ time: point.time, value: point.value })),
     );
-    spxSeries.setData(
-      payload.spx.map((point) => ({ time: point.time, value: point.value })),
+    magsSeries.setData(
+      payload.mags.map((point) => ({ time: point.time, value: point.value })),
     );
     chart.timeScale().fitContent();
     chart
@@ -325,15 +351,15 @@ watch(
       .applyOptions({ autoScale: true, visible: true, borderVisible: true });
     chart.priceScale("right").applyOptions({ autoScale: true });
 
-    if (fullscreenChart && fullscreenPeSeries && fullscreenSpxSeries) {
-      fullscreenPeSeries.setData(
-        payload.forward_pe.map((point) => ({
+    if (fullscreenChart && fullscreenRatioSeries && fullscreenMagsSeries) {
+      fullscreenRatioSeries.setData(
+        payload.ratio.map((point) => ({
           time: point.time,
           value: point.value,
         })),
       );
-      fullscreenSpxSeries.setData(
-        payload.spx.map((point) => ({ time: point.time, value: point.value })),
+      fullscreenMagsSeries.setData(
+        payload.mags.map((point) => ({ time: point.time, value: point.value })),
       );
       fullscreenChart.timeScale().fitContent();
       fullscreenChart.priceScale("left").applyOptions({
@@ -355,18 +381,18 @@ watch(
       initFullscreenChart();
       if (
         data.value &&
-        fullscreenPeSeries &&
-        fullscreenSpxSeries &&
+        fullscreenRatioSeries &&
+        fullscreenMagsSeries &&
         fullscreenChart
       ) {
-        fullscreenPeSeries.setData(
-          data.value.forward_pe.map((point) => ({
+        fullscreenRatioSeries.setData(
+          data.value.ratio.map((point) => ({
             time: point.time,
             value: point.value,
           })),
         );
-        fullscreenSpxSeries.setData(
-          data.value.spx.map((point) => ({
+        fullscreenMagsSeries.setData(
+          data.value.mags.map((point) => ({
             time: point.time,
             value: point.value,
           })),
@@ -378,6 +404,32 @@ watch(
     }
   },
 );
+
+// Computed for latest ratio value
+const latestRatio = computed(() => {
+  const series = data.value?.ratio;
+  const latest =
+    series && series.length ? series[series.length - 1] : undefined;
+  if (
+    latest &&
+    typeof latest.value === "number" &&
+    Number.isFinite(latest.value)
+  ) {
+    return latest.value.toFixed(3);
+  }
+  return "--";
+});
+
+const isAboveThreshold = computed(() => {
+  const series = data.value?.ratio;
+  const latest =
+    series && series.length ? series[series.length - 1] : undefined;
+  return (
+    latest &&
+    typeof latest.value === "number" &&
+    latest.value >= THRESHOLD_LINE.value
+  );
+});
 
 onMounted(() => {
   if (containerRef.value) {
@@ -398,7 +450,7 @@ onBeforeUnmount(() => {
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">
-          S&P 500 - Forward PE Ratio
+          SPY/RSP Ratio
         </div>
       </div>
       <div class="flex items-center gap-3">
@@ -426,6 +478,33 @@ onBeforeUnmount(() => {
     </div>
 
     <div
+      class="flex flex-wrap gap-2 text-xs uppercase tracking-wide items-center"
+    >
+      <span class="text-textMuted flex items-center gap-1 text-sm">
+        Current Ratio：
+        <span
+          :class="[
+            'font-semibold text-base',
+            isAboveThreshold ? 'text-red-400' : 'text-green-400',
+          ]"
+          >{{ latestRatio }}</span
+        >
+      </span>
+      <span
+        v-if="isAboveThreshold"
+        class="px-2 py-0.5 rounded-full bg-red-500/30 text-red-200"
+      >
+        Above Threshold
+      </span>
+      <span
+        v-else
+        class="px-2 py-0.5 rounded-full bg-green-500/30 text-green-200"
+      >
+        Below Threshold
+      </span>
+    </div>
+
+    <div
       class="relative flex-1 w-full aspect-[4/3] md:aspect-auto md:min-h-[360px]"
     >
       <div ref="containerRef" class="absolute inset-0" />
@@ -441,11 +520,13 @@ onBeforeUnmount(() => {
               class="h-2.5 w-2.5 rounded-full"
               style="background-color: #f04949"
             ></span>
-            Forward P/E
+            SPY/RSP Ratio
           </span>
           <span class="font-mono">
             {{
-              typeof hoverInfo.pe === "number" ? hoverInfo.pe.toFixed(2) : "—"
+              typeof hoverInfo.ratio === "number"
+                ? hoverInfo.ratio.toFixed(3)
+                : "—"
             }}
           </span>
         </div>
@@ -455,11 +536,13 @@ onBeforeUnmount(() => {
               class="h-2.5 w-2.5 rounded-full"
               style="background-color: #bdc3c7"
             ></span>
-            S&amp;P 500 (^GSPC)
+            MAGS ETF
           </span>
           <span class="font-mono">
             {{
-              typeof hoverInfo.spx === "number" ? hoverInfo.spx.toFixed(2) : "—"
+              typeof hoverInfo.mags === "number"
+                ? hoverInfo.mags.toFixed(2)
+                : "—"
             }}
           </span>
         </div>
@@ -472,20 +555,24 @@ onBeforeUnmount(() => {
           class="h-2.5 w-2.5 rounded-full"
           style="background-color: #f04949"
         ></span>
-        <span>Forward P/E Ratio</span>
+        <span>SPY/RSP Ratio (Left Axis)</span>
       </div>
       <div class="flex items-center gap-2">
         <span
           class="h-2.5 w-2.5 rounded-full"
           style="background-color: #bdc3c7"
         ></span>
-        <span>S&amp;P 500 Index (^GSPC)</span>
+        <span>MAGS ETF Price (Right Axis)</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="h-0.5 w-4 bg-white"></span>
+        <span>Threshold (3.5)</span>
       </div>
     </div>
 
     <FullscreenModal
       :open="showFullscreen"
-      title="S&P 500 - Forward PE Ratio"
+      title="SPY/RSP Ratio"
       @close="showFullscreen = false"
     >
       <div class="flex flex-col gap-4 w-full h-full">
@@ -509,12 +596,12 @@ onBeforeUnmount(() => {
                   class="h-2.5 w-2.5 rounded-full"
                   style="background-color: #f04949"
                 ></span>
-                Forward P/E
+                SPY/RSP Ratio
               </span>
               <span class="font-mono">
                 {{
-                  typeof fullscreenHover.pe === "number"
-                    ? fullscreenHover.pe.toFixed(2)
+                  typeof fullscreenHover.ratio === "number"
+                    ? fullscreenHover.ratio.toFixed(3)
                     : "—"
                 }}
               </span>
@@ -525,12 +612,12 @@ onBeforeUnmount(() => {
                   class="h-2.5 w-2.5 rounded-full"
                   style="background-color: #bdc3c7"
                 ></span>
-                S&amp;P 500 (^GSPC)
+                MAGS ETF
               </span>
               <span class="font-mono">
                 {{
-                  typeof fullscreenHover.spx === "number"
-                    ? fullscreenHover.spx.toFixed(2)
+                  typeof fullscreenHover.mags === "number"
+                    ? fullscreenHover.mags.toFixed(2)
                     : "—"
                 }}
               </span>

@@ -87,3 +87,8 @@ export interface ForwardPeResponse {
   forward_pe: ValuePoint[];
   spx: ValuePoint[];
 }
+
+export interface SpyRspRatioResponse {
+  ratio: ValuePoint[];
+  mags: ValuePoint[];
+}

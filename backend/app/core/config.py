@@ -32,7 +32,7 @@ class Settings(BaseModel):
         default=["NVDA", "GOOG", "AMZN", "AAPL", "META", "MSFT", "TSLA", "AVGO", "TSM"]
     )
     multi_asset_symbols: List[str] = Field(default=["SPY", "GLD", "QQQ", "BTC-USD"])
-    timezone: str = "US/Eastern"
+    timezone: str = "America/New_York"
     # 统一接口缓存 10 分钟，减少重复计算/请求
     cache_ttl_seconds: int = 600
 

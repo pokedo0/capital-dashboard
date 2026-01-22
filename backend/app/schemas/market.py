@@ -81,3 +81,9 @@ class MarketBreadthResponse(BaseModel):
 class ForwardPeResponse(BaseModel):
     forward_pe: List[ValuePoint]
     spx: List[ValuePoint]
+
+
+class SpyRspRatioResponse(BaseModel):
+    ratio: List[ValuePoint]
+    mags: List[ValuePoint]
+
