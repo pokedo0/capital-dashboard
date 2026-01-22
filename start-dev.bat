@@ -3,7 +3,7 @@ setlocal EnableDelayedExpansion
 
 set ROOT=%~dp0
 set BACKEND_HOST=0.0.0.0
-set BACKEND_PORT=8000
+set BACKEND_PORT=8500
 set FRONTEND_PORT=5173
 
 if not "%1"=="" set BACKEND_HOST=%1

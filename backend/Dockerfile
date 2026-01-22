@@ -7,7 +7,7 @@ WORKDIR /app
 
 # 基础依赖用于构建 wheel，安装完成后自动清理 apt 缓存
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential curl \
+    && apt-get install -y --no-install-recommends build-essential curl tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # 先复制依赖文件，便于 Docker 层缓存
