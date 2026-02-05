@@ -390,11 +390,11 @@ def calculate_leveraged_etf_prices(
         # Calculate ETF Target Price based on CURRENT Price (Incremental)
         etf_target_price = etf_price * (1 + etf_incremental_pct)
         
-        # Calculate ETF Target Change vs Prev Close
-        if etf_prev_close > 0:
-            etf_target_change_pct = ((etf_target_price - etf_prev_close) / etf_prev_close) * 100
-        else:
-            etf_target_change_pct = 0
+        # Calculate ETF Target Change
+        # Fix: Use current_change + leveraged_incremental to ensure consistency
+        # When target_price == current_price, target_change should equal current_change
+        # This avoids issues with ETFs that lack pre/post market data
+        etf_target_change_pct = (etf_change_pct or 0) + (etf_incremental_pct * 100)
         
         items.append(
             LeveragedETFItem(
