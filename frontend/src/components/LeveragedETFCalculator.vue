@@ -15,7 +15,6 @@ const isEditing = ref(false);
 const { data, isLoading, error, refetch } = useQuery({
   queryKey: ['leveraged-etf', searchTicker, targetPrice],
   queryFn: () => fetchLeveragedETFCalculation(searchTicker.value, targetPrice.value),
-  refetchInterval: 60 * 1000, // Refetch every 1 minute for realtime data
   enabled: computed(() => searchTicker.value.length > 0),
 });
 
@@ -191,8 +190,8 @@ onMounted(() => {
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-white/10 text-white/50 text-left">
-            <th class="py-2 px-2 font-medium">Ticker</th>
-            <th class="py-2 px-2 font-medium">Name</th>
+            <th class="sticky left-0 z-20 py-2 px-2 font-medium bg-panel border-r border-white/10">Ticker</th>
+            <th class="hidden md:table-cell py-2 px-2 font-medium">Name</th>
             <th class="py-2 px-2 font-medium text-center">Type</th>
             <th class="py-2 px-2 font-medium text-right">Current Price</th>
             <th class="py-2 px-2 font-medium text-right">Current Change</th>
@@ -208,8 +207,13 @@ onMounted(() => {
             class="border-b border-white/5 hover:bg-white/5 transition-colors"
             :class="item.direction === 'underlying' ? 'bg-blue-500/5' : ''"
           >
-            <td class="py-2.5 px-2 font-mono font-bold text-white">{{ item.ticker }}</td>
-            <td class="py-2.5 px-2 text-white/70 max-w-[200px] truncate" :title="item.name">
+            <td 
+              class="sticky left-0 z-10 py-2.5 px-2 font-mono font-bold text-white border-r border-white/10"
+              :class="item.direction === 'underlying' ? 'bg-[#18202b]' : 'bg-panel'"
+            >
+              {{ item.ticker }}
+            </td>
+            <td class="hidden md:table-cell py-2.5 px-2 text-white/70 max-w-[200px] truncate" :title="item.name">
               {{ item.name }}
             </td>
             <td class="py-2.5 px-2 text-center">
@@ -243,12 +247,6 @@ onMounted(() => {
     <!-- No Data State -->
     <div v-else class="text-white/50 text-center py-8">
       Enter an underlying ticker to search for leveraged ETFs.
-    </div>
-
-    <!-- Footer Note -->
-    <div class="text-white/30 text-xs mt-2">
-      * Prices are realtime. Target calculations assume daily leverage reset mechanism.
-      Data refreshes every minute.
     </div>
   </div>
 </template>
