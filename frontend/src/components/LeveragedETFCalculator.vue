@@ -10,6 +10,7 @@ const searchTicker = ref('QQQ');
 const targetPriceInput = ref<string>('');
 const targetPrice = ref<number | undefined>(undefined);
 const isEditing = ref(false);
+const lastConfirmedInput = ref<string>(''); // 保存上次确认的输入值
 
 // Query
 const { data, isLoading, error, refetch } = useQuery({
@@ -21,7 +22,9 @@ const { data, isLoading, error, refetch } = useQuery({
 // When data loads, set default target price if not set
 watch(data, (newData) => {
   if (newData && !isEditing.value && !targetPriceInput.value) {
-    targetPriceInput.value = newData.underlying.current_price?.toFixed(2) || '';
+    const defaultPrice = newData.underlying.current_price?.toFixed(2) || '';
+    targetPriceInput.value = defaultPrice;
+    lastConfirmedInput.value = defaultPrice; // 同步更新，避免 blur 时触发刷新
   }
 });
 
@@ -67,6 +70,7 @@ const handleSearch = () => {
   searchTicker.value = val;
   targetPriceInput.value = '';
   targetPrice.value = undefined;
+  lastConfirmedInput.value = ''; // 重置上次确认的输入值
 };
 
 const handleKeydown = (e: KeyboardEvent) => {
@@ -77,12 +81,20 @@ const handleKeydown = (e: KeyboardEvent) => {
 
 const handleTargetPriceChange = () => {
   isEditing.value = false;
+  
+  // 如果输入值没有变化，不触发刷新
+  if (targetPriceInput.value === lastConfirmedInput.value) {
+    return;
+  }
+  
   const val = parseFloat(targetPriceInput.value);
   if (!isNaN(val) && val > 0) {
     targetPrice.value = val;
+    lastConfirmedInput.value = targetPriceInput.value;
   } else {
     targetPrice.value = undefined;
     targetPriceInput.value = data.value?.underlying.current_price?.toFixed(2) || '';
+    lastConfirmedInput.value = targetPriceInput.value;
   }
 };
 
@@ -95,6 +107,13 @@ const handleTargetPriceKeydown = (e: KeyboardEvent) => {
 
 const handleTargetPriceFocus = () => {
   isEditing.value = true;
+};
+
+// Refresh handler - also syncs target price to latest
+const handleRefresh = async () => {
+  targetPriceInput.value = '';
+  targetPrice.value = undefined;
+  await refetch();
 };
 
 onMounted(() => {
@@ -117,7 +136,7 @@ onMounted(() => {
             v-model="underlyingInput"
             type="text"
             placeholder="UNDERLYING"
-            class="bg-transparent border-none outline-none text-white w-20 text-xs uppercase placeholder-white/30"
+            class="bg-transparent border-none outline-none text-white w-28 text-sm uppercase placeholder-white/30"
             @keydown="handleKeydown"
           />
           <button
@@ -136,10 +155,10 @@ onMounted(() => {
           <span class="text-white/50 text-xs">Target:</span>
           <input
             v-model="targetPriceInput"
-            type="number"
-            step="0.01"
+            type="text"
+            inputmode="decimal"
             placeholder="Price"
-            class="bg-transparent border-none outline-none text-white w-20 text-xs placeholder-white/30"
+            class="bg-transparent border-none outline-none text-white w-24 text-sm placeholder-white/30"
             @blur="handleTargetPriceChange"
             @keydown="handleTargetPriceKeydown"
             @focus="handleTargetPriceFocus"
@@ -148,7 +167,7 @@ onMounted(() => {
 
         <!-- Refresh Button -->
         <button
-          @click="() => refetch()"
+          @click="handleRefresh"
           :disabled="isLoading"
           class="text-accentCyan hover:text-white transition-colors disabled:opacity-50"
           title="Refresh"
