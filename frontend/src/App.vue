@@ -9,6 +9,7 @@ import Mag7HistogramPerformance from './components/Mag7HistogramPerformance.vue'
 import MultiAssetComparisonChart from './components/MultiAssetComparisonChart.vue';
 import SectorComparisonChart from './components/SectorComparisonChart.vue';
 import CustomAssetDashboard from './components/CustomAssetDashboard.vue';
+import LeveragedETFCalculator from './components/LeveragedETFCalculator.vue';
 import DrawdownChart from './components/DrawdownChart.vue';
 import RelativeComparisonChart from './components/RelativeComparisonChart.vue';
 import FearGreedComparisonChart from './components/FearGreedComparisonChart.vue';
@@ -136,6 +137,7 @@ const handleClearCache = async () => {
         <MultiAssetComparisonChart />
         <SectorComparisonChart />
         <CustomAssetDashboard />
+        <LeveragedETFCalculator />
       </section>
 
       <section class="grid gap-6 xl:grid-cols-2">

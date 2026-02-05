@@ -38,6 +38,11 @@ from .services.spy_rsp_ratio import get_spy_rsp_ratio
 from .services.realtime import get_realtime_market_summary, get_realtime_sector_summary
 from .services.time_ranges import RANGE_TO_DAYS
 from .services.yahoo_client import fetch_and_store
+from .services.leveraged_etf import (
+    fetch_and_store_leveraged_etf_data,
+    calculate_leveraged_etf_prices,
+)
+from .schemas.leveraged_etf import LeveragedETFResponse
 from .utils.cache import TTLCache
 
 # Realtime cache TTL: 5 minutes (300 seconds)
@@ -150,6 +155,9 @@ def on_startup() -> None:
             )
         )
     )
+    # Load leveraged ETF data from CSV
+    with session_scope() as session:
+        fetch_and_store_leveraged_etf_data(session)
     # 美东时间 16:15（刚收盘后）跑一次增量刷新
     scheduler.add_job(daily_refresh_job, "cron", day_of_week="mon-fri", hour=16, minute=15)
     # 美东时间 18:00（夜盘/盘后时段开始后）再跑一次，覆盖盘后数据
@@ -354,3 +362,28 @@ def api_realtime_sector_summary() -> SectorSummaryResponse:
         return realtime_sector_cache.get_or_set("sectors", lambda: get_realtime_sector_summary())
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+# ============ Leveraged ETF Calculator API ============
+
+@app.get("/api/leveraged-etf/calculate", response_model=LeveragedETFResponse)
+def api_leveraged_etf_calculate(
+    underlying: str = Query("QQQ", description="Underlying ticker symbol"),
+    target_price: float = Query(None, description="Target price for underlying (optional)"),
+    session: Session = Depends(get_session),
+) -> LeveragedETFResponse:
+    """
+    Calculate leveraged ETF prices for a given underlying ticker.
+    Returns underlying info and all related leveraged ETFs with realtime prices.
+    """
+    try:
+        return calculate_leveraged_etf_prices(
+            session,
+            underlying.strip().upper(),
+            target_price if target_price and target_price > 0 else None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+

@@ -92,3 +92,24 @@ export interface SpyRspRatioResponse {
   ratio: ValuePoint[];
   mags: ValuePoint[];
 }
+
+// ============ Leveraged ETF Calculator Types ============
+
+export interface LeveragedETFItem {
+  ticker: string;
+  name: string;
+  direction: string;  // "long", "short", or "underlying"
+  leverage: string;   // e.g., "2x", "3x", "1.5x"
+  current_price: number | null;
+  current_change_pct: number | null;
+  ytd_return: number | null;
+  target_change_pct: number | null;
+  target_price: number | null;
+}
+
+export interface LeveragedETFResponse {
+  underlying: LeveragedETFItem;
+  leveraged_etfs: LeveragedETFItem[];
+  target_underlying_price: number;
+}
+

@@ -11,6 +11,7 @@ import type {
   SectorSummaryResponse,
   SeriesPayload,
   SpyRspRatioResponse,
+  LeveragedETFResponse,
 } from '../types/api';
 
 const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
@@ -137,3 +138,16 @@ export const clearApiCache = async (): Promise<void> => {
   await api.post('cache/clear');
 };
 
+// ============ Leveraged ETF Calculator API ============
+
+export const fetchLeveragedETFCalculation = async (
+  underlying: string,
+  targetPrice?: number,
+): Promise<LeveragedETFResponse> => {
+  const params: { underlying: string; target_price?: number } = { underlying };
+  if (targetPrice && targetPrice > 0) {
+    params.target_price = targetPrice;
+  }
+  const { data } = await api.get<LeveragedETFResponse>('leveraged-etf/calculate', { params });
+  return data;
+};
