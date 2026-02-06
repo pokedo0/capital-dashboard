@@ -1,5 +1,7 @@
 # Shepherd Capital Dashboard
 
+[English](README_EN.md) | 中文
+
 前后端分离的美股可视化仪表盘。后端使用 FastAPI + SQLite + APScheduler 抓取多来源市场数据，前端采用 Vue 3 + Vite + Tailwind + lightweight-charts 实现多图表可视化。
 
 <img src="img/img_2.png" style="display:block;margin:0 auto;width:800px;">
