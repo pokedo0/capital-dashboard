@@ -10,10 +10,19 @@
 # print(f"AAPL Trailing P/E: {pe_ratio}")
 
 
-import yfinance as yf
+import requests
 
-nvda = yf.Ticker("NVDA")
+url = "https://query1.finance.yahoo.com/v7/finance/quote"
+params = {"symbols": "NVDA"}
 
-# 尝试直接获取
-print(f"尝试直接读取: {nvda.info.get('ytdReturn')}")
-# 输出通常是: 尝试直接读取: None
+r = requests.get(url, params=params)
+data = r.json()["quoteResponse"]["result"][0]
+
+overnight = {
+    "price": data.get("overnightMarketPrice"),
+    "change": data.get("overnightMarketChange"),
+    "pct": data.get("overnightMarketChangePercent"),
+    "time": data.get("overnightMarketTime"),
+}
+
+print(overnight)
