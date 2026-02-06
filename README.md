@@ -1,4 +1,4 @@
-# Shepherd Capital Dashboard
+# Capital Dashboard
 
 [English](README_EN.md) | 中文
 
