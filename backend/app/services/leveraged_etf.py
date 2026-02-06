@@ -26,6 +26,8 @@ from ..schemas.leveraged_etf import (
 )
 import math
 
+from .overnight_data import get_overnight_quotes
+
 logger = logging.getLogger(__name__)
 
 
@@ -202,13 +204,23 @@ def _parse_leverage(leverage_str: str) -> float:
 def _get_batch_realtime_quotes(symbols: List[str]) -> Dict[str, Dict]:
     """
     Get realtime quotes for multiple symbols in batch.
-    Prefers premarket/postmarket prices when available.
+    
+    Priority order for price source:
+    1. Overnight (夜盘) - when available during overnight trading hours
+    2. Pre-market (盘前) - during pre-market hours
+    3. Post-market (盘后) - during after-hours
+    4. Regular (常规) - during regular trading hours
+    
     Returns dict mapping symbol to quote data.
     """
     result: Dict[str, Dict] = {}
     
     if not symbols:
         return result
+    
+    # First, try to fetch overnight data for all symbols
+    overnight_quotes = get_overnight_quotes(symbols)
+    logger.debug("Fetched overnight data for %d symbols", len(overnight_quotes))
     
     try:
         # Use yfinance Tickers for batch efficiency
@@ -222,7 +234,7 @@ def _get_batch_realtime_quotes(symbols: List[str]) -> Dict[str, Dict]:
                 
                 info = ticker.info
                 
-                # Try to get data for different sessions
+                # Get yfinance data for different sessions
                 premarket_price = info.get("preMarketPrice")
                 postmarket_price = info.get("postMarketPrice")
                 regular_price = info.get("regularMarketPrice") or info.get("currentPrice")
@@ -232,9 +244,27 @@ def _get_batch_realtime_quotes(symbols: List[str]) -> Dict[str, Dict]:
                 current_price = None
                 previous_close = regular_prev_close
                 price_source = "regular"
+                change_pct = None
                 
-                # Determine session and correct previous_close
-                if premarket_price and premarket_price > 0:
+                # Check overnight data first (highest priority)
+                overnight_data = overnight_quotes.get(symbol)
+                if overnight_data and overnight_data.get("price"):
+                    # Overnight session:
+                    # Current = Overnight price
+                    # Base = Regular Market Price (Today's Close)
+                    # Change = Overnight change percentage (from Yahoo)
+                    current_price = overnight_data.get("price")
+                    if regular_price and regular_price > 0:
+                        previous_close = regular_price
+                    price_source = "overnight"
+                    # Use the change_pct directly from overnight data
+                    change_pct = overnight_data.get("change_pct")
+                    logger.debug(
+                        "Using overnight data for %s: price=%.2f, change=%.2f%%",
+                        symbol, current_price, change_pct or 0
+                    )
+                
+                elif premarket_price and premarket_price > 0:
                     # Pre-market session: 
                     # Current = Pre-market price
                     # Base = Regular Market Price (Yesterday's Close)
@@ -242,6 +272,7 @@ def _get_batch_realtime_quotes(symbols: List[str]) -> Dict[str, Dict]:
                     if regular_price and regular_price > 0:
                         previous_close = regular_price
                     price_source = "premarket"
+                    change_pct = info.get("preMarketChangePercent")
                     
                 elif postmarket_price and postmarket_price > 0:
                     # Post-market session:
@@ -251,6 +282,7 @@ def _get_batch_realtime_quotes(symbols: List[str]) -> Dict[str, Dict]:
                     if regular_price and regular_price > 0:
                         previous_close = regular_price
                     price_source = "postmarket"
+                    change_pct = info.get("postMarketChangePercent")
                     
                 elif regular_price and regular_price > 0:
                     # Regular session:
@@ -265,15 +297,6 @@ def _get_batch_realtime_quotes(symbols: List[str]) -> Dict[str, Dict]:
                     current_price = regular_price or premarket_price or postmarket_price
                 if not previous_close:
                     previous_close = regular_prev_close
-
-                # Get change percentages
-                # Note: yfinance returns change percent as percentage (e.g., 1.98 means 1.98%)
-                change_pct = 0
-                
-                if price_source == "premarket":
-                    change_pct = info.get("preMarketChangePercent")
-                elif price_source == "postmarket":
-                    change_pct = info.get("postMarketChangePercent")
                 
                 # If explicit change percent is missing, calculate manually based on selected previous_close
                 if change_pct is None:
@@ -304,7 +327,7 @@ def _get_batch_realtime_quotes(symbols: List[str]) -> Dict[str, Dict]:
                 
                 logger.debug(
                     "Quote for %s: price=%.2f (%s), change=%.2f%%",
-                    symbol, current_price or 0, price_source, change_pct
+                    symbol, current_price or 0, price_source, change_pct or 0
                 )
                 
             except Exception as exc:
