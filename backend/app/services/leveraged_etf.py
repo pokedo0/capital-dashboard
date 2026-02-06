@@ -24,13 +24,32 @@ from ..schemas.leveraged_etf import (
     LeveragedETFItem,
     LeveragedETFResponse,
 )
+import math
 
 logger = logging.getLogger(__name__)
 
+
+def _sanitize_float(value: float | None) -> float | None:
+    """Convert NaN/Inf to None for JSON serialization."""
+    if value is None:
+        return None
+    if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+        return None
+    return value
+
+
+def _is_valid_float(value: float | None) -> bool:
+    """Check if a float value is valid (not None, NaN, or Inf)."""
+    if value is None:
+        return False
+    if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+        return False
+    return True
+
 # CSV data source
 LEVERAGED_ETF_CSV_URL = (
-    "https://github.com/pokedo0/Leveraged-ETF-Data-Scraper/"
-    "raw/refs/heads/main/leveraged_etf_data.csv"
+    "https://raw.githubusercontent.com/pokedo0/Leveraged-ETF-Data-Scraper/"
+    "refs/heads/main/leveraged_etf_filled.csv"
 )
 
 
@@ -275,11 +294,11 @@ def _get_batch_realtime_quotes(symbols: List[str]) -> Dict[str, Dict]:
                     pass
                 
                 result[symbol] = {
-                    "price": current_price,
-                    "previous_close": previous_close,
-                    "change": (current_price - previous_close) if current_price and previous_close else 0,
-                    "change_pct": change_pct,
-                    "ytd_return": ytd_return,
+                    "price": _sanitize_float(current_price),
+                    "previous_close": _sanitize_float(previous_close),
+                    "change": _sanitize_float((current_price - previous_close) if current_price and previous_close else 0),
+                    "change_pct": _sanitize_float(change_pct),
+                    "ytd_return": _sanitize_float(ytd_return),
                     "price_source": price_source,  # For debugging
                 }
                 
@@ -357,11 +376,11 @@ def calculate_leveraged_etf_prices(
         name=f"{underlying} (Underlying)",
         direction="underlying",
         leverage="1x",
-        current_price=underlying_price,
-        current_change_pct=underlying_change_pct,
-        ytd_return=underlying_ytd,
-        target_change_pct=target_change_pct,
-        target_price=target_price,
+        current_price=_sanitize_float(underlying_price),
+        current_change_pct=_sanitize_float(underlying_change_pct),
+        ytd_return=_sanitize_float(underlying_ytd),
+        target_change_pct=_sanitize_float(target_change_pct),
+        target_price=_sanitize_float(target_price),
     )
     
     # Build leveraged ETF items
@@ -375,7 +394,14 @@ def calculate_leveraged_etf_prices(
         etf_change_pct = etf_quote.get("change_pct", 0)
         etf_ytd = etf_quote.get("ytd_return")
         
+        # Skip ETFs with no price data (possibly delisted or no trading data)
         if not etf_price or not etf_prev_close:
+            logger.debug("Skipping %s: no price data available", etf.ticker)
+            continue
+        
+        # Validate price data - skip if NaN or invalid
+        if not _is_valid_float(etf_price) or not _is_valid_float(etf_prev_close):
+            logger.debug("Skipping %s: invalid price data (NaN/Inf)", etf.ticker)
             continue
         
         # Parse leverage
@@ -396,19 +422,24 @@ def calculate_leveraged_etf_prices(
         # This avoids issues with ETFs that lack pre/post market data
         etf_target_change_pct = (etf_change_pct or 0) + (etf_incremental_pct * 100)
         
+        # Final validation - skip if calculated values are NaN
+        if not _is_valid_float(etf_target_price) or not _is_valid_float(etf_target_change_pct):
+            logger.debug("Skipping %s: calculated values are invalid (NaN/Inf)", etf.ticker)
+            continue
+        
         items.append(
             LeveragedETFItem(
                 ticker=etf.ticker,
                 name=etf.name or etf.ticker,
                 direction=etf.direction,
                 leverage=etf.leverage,
-                current_price=etf_price,
-                current_change_pct=etf_change_pct,
-                ytd_return=etf_ytd,
-                target_change_pct=etf_target_change_pct,
-                target_price=round(etf_target_price, 2),
-                avg_volume=etf.avg_volume,
-                aum=etf.aum,
+                current_price=_sanitize_float(etf_price),
+                current_change_pct=_sanitize_float(etf_change_pct),
+                ytd_return=_sanitize_float(etf_ytd),
+                target_change_pct=_sanitize_float(etf_target_change_pct),
+                target_price=_sanitize_float(round(etf_target_price, 2) if etf_target_price else None),
+                avg_volume=_sanitize_float(etf.avg_volume),
+                aum=_sanitize_float(etf.aum),
             )
         )
     
