@@ -16,6 +16,7 @@ import {
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import LegendToggle from './LegendToggle.vue';
+import DataLoadingOverlay from './DataLoadingOverlay.vue';
 import { fetchOhlcv } from '../services/api';
 import type { OHLCVPoint } from '../types/api';
 import FullscreenModal from './FullscreenModal.vue';
@@ -35,7 +36,7 @@ const activeKeys = ref(['price', 'ma', 'volume']);
 const rangeKey = ref('1Y');
 const showFullscreen = ref(false);
 
-const { data, refetch } = useQuery({
+const { data, isPending, refetch } = useQuery({
   queryKey: computed(() => ['ohlcv', '^GSPC', rangeKey.value]),
   queryFn: () => fetchOhlcv('^GSPC', rangeKey.value),
   refetchOnMount: false,
@@ -364,7 +365,8 @@ const attachCrosshair = (
 </script>
 
 <template>
-  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 w-full">
+  <div class="relative bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 w-full">
+    <DataLoadingOverlay :show="isPending && !data" />
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">SP500 Price & Volume</div>

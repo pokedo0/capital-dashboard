@@ -10,6 +10,7 @@ import {
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import FullscreenModal from './FullscreenModal.vue';
+import DataLoadingOverlay from './DataLoadingOverlay.vue';
 import { fetchMarketBreadth } from '../services/api';
 
 type LineSeries = ISeriesApi<'Line'>;
@@ -78,7 +79,7 @@ const selectedOption = computed(
 
 const isQueryEnabled = computed(() => Boolean(selectedSymbol.value));
 
-const { data, refetch } = useQuery({
+const { data, isPending, refetch } = useQuery({
   queryKey: computed(() => [
     'market-breadth',
     props.chartKey ?? props.title,
@@ -362,7 +363,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 h-full w-full">
+  <div class="relative bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 h-full w-full">
+    <DataLoadingOverlay :show="isPending && !data" />
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">

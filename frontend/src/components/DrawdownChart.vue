@@ -11,6 +11,7 @@ import {
 } from 'lightweight-charts';
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
+import DataLoadingOverlay from './DataLoadingOverlay.vue';
 import { fetchDrawdown } from '../services/api';
 
 type AreaSeries = ISeriesApi<'Area'>;
@@ -22,7 +23,7 @@ const selectedSymbol = ref('SPY');
 const rangeKey = ref('1Y');
 const chartContainer = ref<HTMLDivElement | null>(null);
 
-const { data, refetch } = useQuery({
+const { data, isPending, refetch } = useQuery({
   queryKey: computed(() => ['drawdown', selectedSymbol.value, rangeKey.value]),
   queryFn: () => fetchDrawdown(selectedSymbol.value, rangeKey.value),
 });
@@ -253,7 +254,8 @@ const symbolInput = computed({
 </script>
 
 <template>
-  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 relative w-full">
+  <div class="relative bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 relative w-full">
+    <DataLoadingOverlay :show="isPending && !data" />
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl font-semibold uppercase">{{ selectedSymbol }} Drawdown</div>

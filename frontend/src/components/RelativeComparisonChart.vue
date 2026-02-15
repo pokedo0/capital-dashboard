@@ -9,6 +9,7 @@ import {
 } from 'lightweight-charts';
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
+import DataLoadingOverlay from './DataLoadingOverlay.vue';
 import { fetchRelativeTo } from '../services/api';
 
 type LineSeries = ISeriesApi<'Line'>;
@@ -21,7 +22,7 @@ const selectedBenchmark = ref('XLV');
 const rangeKey = ref('1Y');
 const chartContainer = ref<HTMLDivElement | null>(null);
 
-const { data, refetch } = useQuery({
+const { data, isPending, refetch } = useQuery({
   queryKey: computed(() => ['relative-to', selectedSymbol.value, selectedBenchmark.value, rangeKey.value]),
   queryFn: () => fetchRelativeTo(selectedSymbol.value, selectedBenchmark.value, rangeKey.value),
 });
@@ -152,7 +153,8 @@ const benchmarkInput = computed({
 </script>
 
 <template>
-  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 w-full">
+  <div class="relative bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 w-full">
+    <DataLoadingOverlay :show="isPending && !data" />
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl font-semibold uppercase">{{ selectedSymbol }} Relative {{ selectedBenchmark }}</div>

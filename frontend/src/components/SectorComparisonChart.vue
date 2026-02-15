@@ -13,6 +13,7 @@ import TimeRangeSelector from './TimeRangeSelector.vue';
 import LegendToggle from './LegendToggle.vue';
 import FullscreenModal from './FullscreenModal.vue';
 import TwoAssetHistogram from './TwoAssetHistogram.vue';
+import DataLoadingOverlay from './DataLoadingOverlay.vue';
 import { fetchRelativePerformance } from '../services/api';
 
 type LineSeries = ISeriesApi<'Line'>;
@@ -92,7 +93,7 @@ const downsampleWeekly = (points: { time: string; value: number }[]) => {
   return result;
 };
 
-const { data, refetch } = useQuery({
+const { data, isPending, refetch } = useQuery({
   queryKey: computed(() => ['relative', 'sectors', rangeKey.value]),
   queryFn: () => fetchRelativePerformance(SYMBOL_PARAMS, rangeKey.value),
 });
@@ -339,7 +340,8 @@ const attachCrosshair = (
 </script>
 
 <template>
-  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 w-full">
+  <div class="relative bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 w-full">
+    <DataLoadingOverlay :show="isPending && !data" />
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl font-semibold uppercase" style="color: #67f0d6">Sector Performance</div>

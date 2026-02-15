@@ -2,9 +2,10 @@
 import { computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { fetchRealtimeSectorSummary } from '../services/api';
+import DataLoadingOverlay from './DataLoadingOverlay.vue';
 
 // Using realtime API with 5-minute TTL cache
-const { data } = useQuery({
+const { data, isPending } = useQuery({
   queryKey: ['sectors', 'realtime'],
   queryFn: () => fetchRealtimeSectorSummary(),
   refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
@@ -19,7 +20,8 @@ const formatNumber = (value: number) => value.toFixed(2);
 </script>
 
 <template>
-  <div class="bg-panel border border-white/10 rounded-xl p-4 h-full">
+  <div class="relative bg-panel border border-white/10 rounded-xl p-4 h-full">
+    <DataLoadingOverlay :show="isPending && !data" />
     <div class="text-xl font-semibold text-white uppercase tracking-wide mb-4">Sector ETFs</div>
     <div class="overflow-x-auto">
       <table class="w-full text-left text-sm whitespace-nowrap">

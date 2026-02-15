@@ -8,20 +8,21 @@ import MarketHeader from './components/MarketHeader.vue';
 import MarketStatsRow from './components/MarketStatsRow.vue';
 import Sp500PriceVolumeChart from './components/Sp500PriceVolumeChart.vue';
 import SectorTable from './components/SectorTable.vue';
+import WidgetLoading from './components/WidgetLoading.vue';
 
-// Below-the-fold: lazy-loaded (code-split) for faster initial page load
-const Mag7RelativeChart = defineAsyncComponent(() => import('./components/Mag7RelativeChart.vue'));
-const Mag7HistogramPerformance = defineAsyncComponent(() => import('./components/Mag7HistogramPerformance.vue'));
-const MultiAssetComparisonChart = defineAsyncComponent(() => import('./components/MultiAssetComparisonChart.vue'));
-const SectorComparisonChart = defineAsyncComponent(() => import('./components/SectorComparisonChart.vue'));
-const CustomAssetDashboard = defineAsyncComponent(() => import('./components/CustomAssetDashboard.vue'));
-const LeveragedETFCalculator = defineAsyncComponent(() => import('./components/LeveragedETFCalculator.vue'));
-const DrawdownChart = defineAsyncComponent(() => import('./components/DrawdownChart.vue'));
-const RelativeComparisonChart = defineAsyncComponent(() => import('./components/RelativeComparisonChart.vue'));
-const FearGreedComparisonChart = defineAsyncComponent(() => import('./components/FearGreedComparisonChart.vue'));
-const MarketBreadthChart = defineAsyncComponent(() => import('./components/MarketBreadthChart.vue'));
-const SpForwardPeChart = defineAsyncComponent(() => import('./components/SpForwardPeChart.vue'));
-const SpyRspRatioChart = defineAsyncComponent(() => import('./components/SpyRspRatioChart.vue'));
+// Below-the-fold: lazy-loaded (code-split) with loading fallback
+const Mag7RelativeChart = defineAsyncComponent({ loader: () => import('./components/Mag7RelativeChart.vue'), loadingComponent: WidgetLoading, delay: 120 });
+const Mag7HistogramPerformance = defineAsyncComponent({ loader: () => import('./components/Mag7HistogramPerformance.vue'), loadingComponent: WidgetLoading, delay: 120 });
+const MultiAssetComparisonChart = defineAsyncComponent({ loader: () => import('./components/MultiAssetComparisonChart.vue'), loadingComponent: WidgetLoading, delay: 120 });
+const SectorComparisonChart = defineAsyncComponent({ loader: () => import('./components/SectorComparisonChart.vue'), loadingComponent: WidgetLoading, delay: 120 });
+const CustomAssetDashboard = defineAsyncComponent({ loader: () => import('./components/CustomAssetDashboard.vue'), loadingComponent: WidgetLoading, delay: 120 });
+const LeveragedETFCalculator = defineAsyncComponent({ loader: () => import('./components/LeveragedETFCalculator.vue'), loadingComponent: WidgetLoading, delay: 120 });
+const DrawdownChart = defineAsyncComponent({ loader: () => import('./components/DrawdownChart.vue'), loadingComponent: WidgetLoading, delay: 120 });
+const RelativeComparisonChart = defineAsyncComponent({ loader: () => import('./components/RelativeComparisonChart.vue'), loadingComponent: WidgetLoading, delay: 120 });
+const FearGreedComparisonChart = defineAsyncComponent({ loader: () => import('./components/FearGreedComparisonChart.vue'), loadingComponent: WidgetLoading, delay: 120 });
+const MarketBreadthChart = defineAsyncComponent({ loader: () => import('./components/MarketBreadthChart.vue'), loadingComponent: WidgetLoading, delay: 120 });
+const SpForwardPeChart = defineAsyncComponent({ loader: () => import('./components/SpForwardPeChart.vue'), loadingComponent: WidgetLoading, delay: 120 });
+const SpyRspRatioChart = defineAsyncComponent({ loader: () => import('./components/SpyRspRatioChart.vue'), loadingComponent: WidgetLoading, delay: 120 });
 
 const nasdaqBreadthOptions = [
   { value: '$NDTW', label: '$NDTW Above 20-Day' },

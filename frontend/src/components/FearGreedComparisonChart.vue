@@ -13,6 +13,7 @@ import {
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import FullscreenModal from './FullscreenModal.vue';
+import DataLoadingOverlay from './DataLoadingOverlay.vue';
 import { fetchFearGreedComparison } from '../services/api';
 
 type LineSeries = ISeriesApi<'Line'>;
@@ -21,7 +22,7 @@ const rangeOptions = ['1M', '3M', '6M', 'YTD', '1Y', '5Y'];
 const rangeKey = ref('1Y');
 const showFullscreen = ref(false);
 
-const { data, refetch } = useQuery({
+const { data, isPending, refetch } = useQuery({
   queryKey: computed(() => ['fear-greed', rangeKey.value]),
   queryFn: () => fetchFearGreedComparison(rangeKey.value),
 });
@@ -435,7 +436,8 @@ const indexLabel = computed(() => {
 </script>
 
 <template>
-  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 w-full">
+  <div class="relative bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 w-full">
+    <DataLoadingOverlay :show="isPending && !data" />
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">Fear & Greed Index</div>

@@ -21,6 +21,7 @@ import {
 import { useQuery } from "@tanstack/vue-query";
 import TimeRangeSelector from "./TimeRangeSelector.vue";
 import FullscreenModal from "./FullscreenModal.vue";
+import DataLoadingOverlay from "./DataLoadingOverlay.vue";
 import { fetchSpyRspRatio } from "../services/api";
 
 type LineSeries = ISeriesApi<"Line">;
@@ -36,7 +37,7 @@ const THRESHOLD_LINE = {
   color: "#2b228c",
 } as const;
 
-const { data, refetch } = useQuery({
+const { data, isPending, refetch } = useQuery({
   queryKey: computed(() => ["spy-rsp-ratio", rangeKey.value]),
   queryFn: () => fetchSpyRspRatio(rangeKey.value),
 });
@@ -445,8 +446,9 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 w-full"
+    class="relative bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 w-full"
   >
+    <DataLoadingOverlay :show="isPending && !data" />
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">

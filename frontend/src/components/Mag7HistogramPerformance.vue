@@ -3,6 +3,7 @@ import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import * as echarts from 'echarts';
 import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
+import DataLoadingOverlay from './DataLoadingOverlay.vue';
 import { fetchRelativePerformance } from '../services/api';
 
 const BASE_SYMBOLS = ['NVDA', 'GOOG', 'AMZN', 'AAPL', 'META', 'MSFT', 'TSLA', '^NDX'] as const;
@@ -55,7 +56,7 @@ let chart: echarts.ECharts | null = null;
 
 // unused: const queryRange = computed(() => (rangeKey.value === 'YTD' ? '1Y' : rangeKey.value));
 
-const { data, refetch } = useQuery({
+const { data, isPending, refetch } = useQuery({
   queryKey: computed(() => ['relative', 'mag7-group', rangeKey.value]),
   queryFn: () => fetchRelativePerformance([...EXTENDED_SYMBOLS], rangeKey.value),
 });
@@ -171,7 +172,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="bg-panel border border-white/10 rounded-xl p-2 md:p-4 flex flex-col gap-4 h-full w-full">
+  <div class="relative bg-panel border border-white/10 rounded-xl p-2 md:p-4 flex flex-col gap-4 h-full w-full">
+    <DataLoadingOverlay :show="isPending && !data" />
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">Mag 7 Histogram Performance</div>

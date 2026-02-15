@@ -11,6 +11,7 @@ import { useQuery } from '@tanstack/vue-query';
 import TimeRangeSelector from './TimeRangeSelector.vue';
 import LegendToggle from './LegendToggle.vue';
 import FullscreenModal from './FullscreenModal.vue';
+import DataLoadingOverlay from './DataLoadingOverlay.vue';
 import { fetchRelativePerformance } from '../services/api';
 
 type LineSeries = ISeriesApi<'Line'>;
@@ -60,7 +61,7 @@ const displayedSymbols = computed(() =>
 const activeKeys = ref<string[]>([...displayedSymbols.value]);
 const showFullscreen = ref(false);
 
-const { data, refetch } = useQuery({
+const { data, isPending, refetch } = useQuery({
   queryKey: computed(() => ['relative', 'mag7-group', rangeKey.value]),
   queryFn: () => fetchRelativePerformance([...EXTENDED_SYMBOLS], rangeKey.value),
 });
@@ -318,7 +319,8 @@ const attachCrosshair = (
 </script>
 
 <template>
-  <div class="bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 h-full w-full">
+  <div class="relative bg-panel border border-white/10 rounded-xl p-4 flex flex-col gap-4 h-full w-full">
+    <DataLoadingOverlay :show="isPending && !data" />
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <div class="text-xl text-accentCyan font-semibold uppercase">Mag 7 Line Performance</div>      </div>
