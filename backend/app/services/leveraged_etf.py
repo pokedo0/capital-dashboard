@@ -313,18 +313,15 @@ def _get_batch_realtime_quotes(symbols: List[str]) -> Dict[str, Dict]:
                 if current_price and previous_close and previous_close > 0:
                     change_pct = ((current_price - previous_close) / previous_close) * 100
             
-            # YTD return: use ytdReturn from info dict (ratio, e.g. 0.15 = 15%)
-            ytd_return = None
-            raw_ytd = info.get("ytdReturn")
-            if raw_ytd is not None and _is_valid_float(raw_ytd):
-                ytd_return = raw_ytd * 100  # Convert ratio to percentage
+            # YTD return will be calculated in the second pass below
+            # (ytdReturn from info is NOT year-to-date; it's a fund lifetime metric)
             
             result[symbol] = {
                 "price": _sanitize_float(current_price),
                 "previous_close": _sanitize_float(previous_close),
                 "change": _sanitize_float((current_price - previous_close) if current_price and previous_close else 0),
                 "change_pct": _sanitize_float(change_pct),
-                "ytd_return": _sanitize_float(ytd_return),
+                "ytd_return": None,
                 "price_source": price_source,
             }
             
@@ -337,27 +334,29 @@ def _get_batch_realtime_quotes(symbols: List[str]) -> Dict[str, Dict]:
             logger.warning("Failed to process quote for %s: %s", symbol, exc)
             continue
     
-    # Second pass: fill in missing YTD via a single batch yf.download()
-    # (ytdReturn is only available for ETFs/funds in info, not stocks)
-    missing_ytd = [
+    # Calculate YTD for all symbols via a single batch yf.download()
+    # YTD baseline = last trading day close of the PREVIOUS year (matches Yahoo Finance).
+    # yfinance info's ytdReturn is a fund lifetime metric, NOT year-to-date.
+    ytd_symbols = [
         s for s in symbols
-        if s in result and result[s].get("ytd_return") is None and result[s].get("price")
+        if s in result and result[s].get("price")
     ]
-    if missing_ytd:
-        logger.info("Fetching YTD data for %d symbols missing ytdReturn: %s", len(missing_ytd), missing_ytd)
+    if ytd_symbols:
+        logger.info("Fetching YTD data for %d symbols: %s", len(ytd_symbols), ytd_symbols)
         try:
-            year_start = datetime(datetime.now().year, 1, 1)
-            # Download just the first 10 calendar days to find the first trading day
-            year_start_end = datetime(datetime.now().year, 1, 15)
+            current_year = datetime.now().year
+            # Download last ~10 days of previous year to find the last trading day
+            prev_year_start = datetime(current_year - 1, 12, 20)
+            prev_year_end = datetime(current_year, 1, 1)  # exclusive end
             hist = yf.download(
-                missing_ytd,
-                start=year_start,
-                end=year_start_end,
+                ytd_symbols,
+                start=prev_year_start,
+                end=prev_year_end,
                 progress=False,
                 threads=True,
             )
             if not hist.empty:
-                for sym in missing_ytd:
+                for sym in ytd_symbols:
                     try:
                         # yfinance may return MultiIndex columns (Price, Ticker)
                         # even for single-ticker downloads in newer versions.
@@ -375,21 +374,22 @@ def _get_batch_realtime_quotes(symbols: List[str]) -> Dict[str, Dict]:
                         
                         valid = close_col.dropna()
                         if valid.empty:
-                            logger.info("No valid Close data for %s in year-start period", sym)
+                            logger.info("No valid Close data for %s in prev-year-end period", sym)
                             continue
                         
-                        first_close = float(valid.iloc[0])
+                        # Use the LAST close of the previous year as baseline
+                        last_close_prev_year = float(valid.iloc[-1])
                         current = result[sym].get("price")
-                        if first_close > 0 and current:
-                            ytd_pct = ((current - first_close) / first_close) * 100
+                        if last_close_prev_year > 0 and current:
+                            ytd_pct = ((current - last_close_prev_year) / last_close_prev_year) * 100
                             result[sym]["ytd_return"] = _sanitize_float(ytd_pct)
-                            logger.info("YTD for %s: %.2f%% (year-start close=%.2f, current=%.2f)", sym, ytd_pct, first_close, current)
+                            logger.info("YTD for %s: %.2f%% (prev-year-end close=%.2f, current=%.2f)", sym, ytd_pct, last_close_prev_year, current)
                         else:
-                            logger.info("Skipping YTD for %s: first_close=%.2f, current=%s", sym, first_close, current)
+                            logger.info("Skipping YTD for %s: last_close_prev_year=%.2f, current=%s", sym, last_close_prev_year, current)
                     except Exception as exc:
                         logger.warning("Failed to calculate YTD for %s: %s", sym, exc)
             else:
-                logger.warning("yf.download returned empty DataFrame for YTD symbols: %s", missing_ytd)
+                logger.warning("yf.download returned empty DataFrame for YTD symbols: %s", ytd_symbols)
         except Exception as exc:
             logger.warning("Batch YTD download failed: %s", exc)
     
