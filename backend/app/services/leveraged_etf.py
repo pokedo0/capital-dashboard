@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime
 from io import StringIO
 from typing import Dict, List, Optional, Tuple
@@ -168,8 +169,6 @@ def get_leveraged_etfs_for_underlying(
     
     results = session.exec(statement).all()
     
-    results = session.exec(statement).all()
-    
     # Sort:
     # 1. Direction: Long (0) first, Short (1) second
     # 2. Leverage: High to Low
@@ -201,9 +200,22 @@ def _parse_leverage(leverage_str: str) -> float:
         return 1.0
 
 
+def _fetch_single_info(symbol: str) -> Tuple[str, Optional[Dict]]:
+    """Fetch ticker.info for a single symbol. Used by ThreadPoolExecutor."""
+    try:
+        ticker = yf.Ticker(symbol)
+        return (symbol, ticker.info)
+    except Exception as exc:
+        logger.warning("Failed to fetch info for %s: %s", symbol, exc)
+        return (symbol, None)
+
+
 def _get_batch_realtime_quotes(symbols: List[str]) -> Dict[str, Dict]:
     """
-    Get realtime quotes for multiple symbols in batch.
+    Get realtime quotes for multiple symbols concurrently.
+    
+    Uses ThreadPoolExecutor to fetch ticker.info in parallel instead of
+    sequentially, reducing total wait time from O(n) to O(n/workers).
     
     Priority order for price source:
     1. Overnight (夜盘) - when available during overnight trading hours
@@ -222,120 +234,164 @@ def _get_batch_realtime_quotes(symbols: List[str]) -> Dict[str, Dict]:
     overnight_quotes = get_overnight_quotes(symbols)
     logger.debug("Fetched overnight data for %d symbols", len(overnight_quotes))
     
-    try:
-        # Use yfinance Tickers for batch efficiency
-        tickers = yf.Tickers(" ".join(symbols))
+    # Concurrently fetch ticker.info for all symbols
+    info_map: Dict[str, Dict] = {}
+    max_workers = min(len(symbols), 8)
+    logger.info(
+        "Fetching realtime quotes for %d symbols with %d workers",
+        len(symbols), max_workers,
+    )
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {
+            pool.submit(_fetch_single_info, symbol): symbol
+            for symbol in symbols
+        }
+        for future in as_completed(futures):
+            symbol, info = future.result()
+            if info is not None:
+                info_map[symbol] = info
+    
+    # Process fetched info into quote results
+    for symbol in symbols:
+        info = info_map.get(symbol)
+        if not info:
+            continue
         
-        for symbol in symbols:
-            try:
-                ticker = tickers.tickers.get(symbol)
-                if not ticker:
-                    continue
+        try:
+            # Get yfinance data for different sessions
+            premarket_price = info.get("preMarketPrice")
+            postmarket_price = info.get("postMarketPrice")
+            regular_price = info.get("regularMarketPrice") or info.get("currentPrice")
+            regular_prev_close = info.get("regularMarketPreviousClose") or info.get("previousClose")
+            
+            # Default selection
+            current_price = None
+            previous_close = regular_prev_close
+            price_source = "regular"
+            change_pct = None
+            
+            # Check overnight data first (highest priority)
+            overnight_data = overnight_quotes.get(symbol)
+            if overnight_data and overnight_data.get("price"):
+                current_price = overnight_data.get("price")
+                if regular_price and regular_price > 0:
+                    previous_close = regular_price
+                price_source = "overnight"
+                change_pct = overnight_data.get("change_pct")
+                logger.debug(
+                    "Using overnight data for %s: price=%.2f, change=%.2f%%",
+                    symbol, current_price, change_pct or 0
+                )
+            
+            elif premarket_price and premarket_price > 0:
+                current_price = premarket_price
+                if regular_price and regular_price > 0:
+                    previous_close = regular_price
+                price_source = "premarket"
+                change_pct = info.get("preMarketChangePercent")
                 
-                info = ticker.info
+            elif postmarket_price and postmarket_price > 0:
+                current_price = postmarket_price
+                if regular_price and regular_price > 0:
+                    previous_close = regular_price
+                price_source = "postmarket"
+                change_pct = info.get("postMarketChangePercent")
                 
-                # Get yfinance data for different sessions
-                premarket_price = info.get("preMarketPrice")
-                postmarket_price = info.get("postMarketPrice")
-                regular_price = info.get("regularMarketPrice") or info.get("currentPrice")
-                regular_prev_close = info.get("regularMarketPreviousClose") or info.get("previousClose")
-                
-                # Default selection
-                current_price = None
+            elif regular_price and regular_price > 0:
+                current_price = regular_price
                 previous_close = regular_prev_close
                 price_source = "regular"
-                change_pct = None
-                
-                # Check overnight data first (highest priority)
-                overnight_data = overnight_quotes.get(symbol)
-                if overnight_data and overnight_data.get("price"):
-                    # Overnight session:
-                    # Current = Overnight price
-                    # Base = Regular Market Price (Today's Close)
-                    # Change = Overnight change percentage (from Yahoo)
-                    current_price = overnight_data.get("price")
-                    if regular_price and regular_price > 0:
-                        previous_close = regular_price
-                    price_source = "overnight"
-                    # Use the change_pct directly from overnight data
-                    change_pct = overnight_data.get("change_pct")
-                    logger.debug(
-                        "Using overnight data for %s: price=%.2f, change=%.2f%%",
-                        symbol, current_price, change_pct or 0
-                    )
-                
-                elif premarket_price and premarket_price > 0:
-                    # Pre-market session: 
-                    # Current = Pre-market price
-                    # Base = Regular Market Price (Yesterday's Close)
-                    current_price = premarket_price
-                    if regular_price and regular_price > 0:
-                        previous_close = regular_price
-                    price_source = "premarket"
-                    change_pct = info.get("preMarketChangePercent")
-                    
-                elif postmarket_price and postmarket_price > 0:
-                    # Post-market session:
-                    # Current = Post-market price
-                    # Base = Regular Market Price (Today's Close)
-                    current_price = postmarket_price
-                    if regular_price and regular_price > 0:
-                        previous_close = regular_price
-                    price_source = "postmarket"
-                    change_pct = info.get("postMarketChangePercent")
-                    
-                elif regular_price and regular_price > 0:
-                    # Regular session:
-                    # Current = Regular price
-                    # Base = Regular Market Previous Close
-                    current_price = regular_price
-                    previous_close = regular_prev_close
-                    price_source = "regular"
-                
-                # Fallback if specific price is missing
-                if not current_price:
-                    current_price = regular_price or premarket_price or postmarket_price
-                if not previous_close:
-                    previous_close = regular_prev_close
-                
-                # If explicit change percent is missing, calculate manually based on selected previous_close
-                if change_pct is None:
-                    if current_price and previous_close and previous_close > 0:
-                        change_pct = ((current_price - previous_close) / previous_close) * 100
-                
-                # For YTD calculation
-                ytd_return = None
-                try:
-                    # Get the first trading day of the year
-                    year_start = datetime(datetime.now().year, 1, 1)
-                    hist = ticker.history(start=year_start, end=datetime.now())
-                    if not hist.empty:
-                        first_close = hist["Close"].iloc[0]
-                        if current_price and first_close:
-                            ytd_return = ((current_price - first_close) / first_close) * 100
-                except Exception:
-                    pass
-                
-                result[symbol] = {
-                    "price": _sanitize_float(current_price),
-                    "previous_close": _sanitize_float(previous_close),
-                    "change": _sanitize_float((current_price - previous_close) if current_price and previous_close else 0),
-                    "change_pct": _sanitize_float(change_pct),
-                    "ytd_return": _sanitize_float(ytd_return),
-                    "price_source": price_source,  # For debugging
-                }
-                
-                logger.debug(
-                    "Quote for %s: price=%.2f (%s), change=%.2f%%",
-                    symbol, current_price or 0, price_source, change_pct or 0
-                )
-                
-            except Exception as exc:
-                logger.warning("Failed to get quote for %s: %s", symbol, exc)
-                continue
-                
-    except Exception as exc:
-        logger.error("Batch quote fetch failed: %s", exc)
+            
+            # Fallback if specific price is missing
+            if not current_price:
+                current_price = regular_price or premarket_price or postmarket_price
+            if not previous_close:
+                previous_close = regular_prev_close
+            
+            # If explicit change percent is missing, calculate manually
+            if change_pct is None:
+                if current_price and previous_close and previous_close > 0:
+                    change_pct = ((current_price - previous_close) / previous_close) * 100
+            
+            # YTD return: use ytdReturn from info dict (ratio, e.g. 0.15 = 15%)
+            ytd_return = None
+            raw_ytd = info.get("ytdReturn")
+            if raw_ytd is not None and _is_valid_float(raw_ytd):
+                ytd_return = raw_ytd * 100  # Convert ratio to percentage
+            
+            result[symbol] = {
+                "price": _sanitize_float(current_price),
+                "previous_close": _sanitize_float(previous_close),
+                "change": _sanitize_float((current_price - previous_close) if current_price and previous_close else 0),
+                "change_pct": _sanitize_float(change_pct),
+                "ytd_return": _sanitize_float(ytd_return),
+                "price_source": price_source,
+            }
+            
+            logger.debug(
+                "Quote for %s: price=%.2f (%s), change=%.2f%%",
+                symbol, current_price or 0, price_source, change_pct or 0
+            )
+            
+        except Exception as exc:
+            logger.warning("Failed to process quote for %s: %s", symbol, exc)
+            continue
+    
+    # Second pass: fill in missing YTD via a single batch yf.download()
+    # (ytdReturn is only available for ETFs/funds in info, not stocks)
+    missing_ytd = [
+        s for s in symbols
+        if s in result and result[s].get("ytd_return") is None and result[s].get("price")
+    ]
+    if missing_ytd:
+        logger.info("Fetching YTD data for %d symbols missing ytdReturn: %s", len(missing_ytd), missing_ytd)
+        try:
+            year_start = datetime(datetime.now().year, 1, 1)
+            # Download just the first 10 calendar days to find the first trading day
+            year_start_end = datetime(datetime.now().year, 1, 15)
+            hist = yf.download(
+                missing_ytd,
+                start=year_start,
+                end=year_start_end,
+                progress=False,
+                threads=True,
+            )
+            if not hist.empty:
+                for sym in missing_ytd:
+                    try:
+                        # yfinance may return MultiIndex columns (Price, Ticker)
+                        # even for single-ticker downloads in newer versions.
+                        # Always try symbol-indexed access first.
+                        close_data = hist["Close"]
+                        if isinstance(close_data, pd.DataFrame) and sym in close_data.columns:
+                            close_col = close_data[sym]
+                        elif isinstance(close_data, pd.Series):
+                            close_col = close_data
+                        elif isinstance(close_data, pd.DataFrame) and close_data.shape[1] == 1:
+                            close_col = close_data.iloc[:, 0]
+                        else:
+                            logger.warning("Could not extract Close for %s from columns: %s", sym, list(close_data.columns) if hasattr(close_data, 'columns') else type(close_data))
+                            continue
+                        
+                        valid = close_col.dropna()
+                        if valid.empty:
+                            logger.info("No valid Close data for %s in year-start period", sym)
+                            continue
+                        
+                        first_close = float(valid.iloc[0])
+                        current = result[sym].get("price")
+                        if first_close > 0 and current:
+                            ytd_pct = ((current - first_close) / first_close) * 100
+                            result[sym]["ytd_return"] = _sanitize_float(ytd_pct)
+                            logger.info("YTD for %s: %.2f%% (year-start close=%.2f, current=%.2f)", sym, ytd_pct, first_close, current)
+                        else:
+                            logger.info("Skipping YTD for %s: first_close=%.2f, current=%s", sym, first_close, current)
+                    except Exception as exc:
+                        logger.warning("Failed to calculate YTD for %s: %s", sym, exc)
+            else:
+                logger.warning("yf.download returned empty DataFrame for YTD symbols: %s", missing_ytd)
+        except Exception as exc:
+            logger.warning("Batch YTD download failed: %s", exc)
     
     return result
 
