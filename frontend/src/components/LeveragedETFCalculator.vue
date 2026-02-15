@@ -6,8 +6,8 @@ import DataLoadingOverlay from './DataLoadingOverlay.vue';
 import type { LeveragedETFItem } from '../types/api';
 
 // State
-const underlyingInput = ref('QQQ');
-const searchTicker = ref('QQQ');
+const underlyingInput = ref('NVDA');
+const searchTicker = ref('NVDA');
 const targetPriceInput = ref<string>('');
 const targetPrice = ref<number | undefined>(undefined);
 const isEditing = ref(false);
