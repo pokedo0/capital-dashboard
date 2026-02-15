@@ -54,25 +54,41 @@ def fetch_and_store(session: Session, symbol: str, start: date, end: date) -> No
         logger.warning("Yahoo returned empty frame for %s (%s -> %s)", symbol, start, end)
         return
 
+    # Bulk-load existing dates for this symbol in one query
+    trade_dates = [idx.date() for idx in df.index]
+    from sqlmodel import select
+    existing_records = session.exec(
+        select(PriceRecord).where(
+            PriceRecord.symbol == symbol,
+            PriceRecord.trade_date.in_(trade_dates),
+        )
+    ).all()
+    existing_map = {rec.trade_date: rec for rec in existing_records}
+
+    new_records: List[PriceRecord] = []
     for index, row in df.iterrows():
         trade_date = index.date()
-        existing = session.get(PriceRecord, (symbol, trade_date))
+        o = _safe_float(row.get("Open"))
+        h = _safe_float(row.get("High"))
+        lo = _safe_float(row.get("Low"))
+        c = _safe_float(row.get("Close"))
+        v = _safe_float(row.get("Volume"))
+        existing = existing_map.get(trade_date)
         if existing:
-            existing.open = _safe_float(row.get("Open"))
-            existing.high = _safe_float(row.get("High"))
-            existing.low = _safe_float(row.get("Low"))
-            existing.close = _safe_float(row.get("Close"))
-            existing.volume = _safe_float(row.get("Volume"))
+            existing.open = o
+            existing.high = h
+            existing.low = lo
+            existing.close = c
+            existing.volume = v
         else:
-            new_record = PriceRecord(
-                symbol=symbol,
-                trade_date=trade_date,
-                open=_safe_float(row.get("Open")),
-                high=_safe_float(row.get("High")),
-                low=_safe_float(row.get("Low")),
-                close=_safe_float(row.get("Close")),
-                volume=_safe_float(row.get("Volume")),
+            new_records.append(
+                PriceRecord(
+                    symbol=symbol,
+                    trade_date=trade_date,
+                    open=o, high=h, low=lo, close=c, volume=v,
+                )
             )
-            session.add(new_record)
 
+    if new_records:
+        session.add_all(new_records)
     session.commit()

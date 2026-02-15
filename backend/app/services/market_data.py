@@ -264,6 +264,7 @@ def _parse_pct(value: str | float | int | None) -> float | None:
 def _fetch_constituents_changes(url: str) -> Tuple[float | None, float | None]:
     """
     读取成分股 CSV，返回 (advancers_pct, decliners_pct)，涨跌判断基于列 `Chg`（绝对变化）。
+    Uses vectorized pandas operations for speed.
     """
     try:
         response = requests.get(url, timeout=10)
@@ -283,27 +284,22 @@ def _fetch_constituents_changes(url: str) -> Tuple[float | None, float | None]:
         logger.warning("Constituents CSV missing required columns")
         return None, None
 
-    total = len(df)
-    if total == 0:
+    if len(df) == 0:
         return None, None
 
-    advancers = decliners = flats = 0
-    for _, row in df.iterrows():
-        change_val = _parse_pct(row.get("Chg"))
-        if change_val is None:
-            continue
-        if change_val > 0:
-            advancers += 1
-        elif change_val < 0:
-            decliners += 1
-        else:
-            flats += 1
+    # Vectorized: coerce Chg column to numeric, dropping non-parseable rows
+    chg = pd.to_numeric(
+        df["Chg"].astype(str).str.replace(r"[()%]", "", regex=True),
+        errors="coerce",
+    )
+    valid = chg.dropna()
+    tracked = len(valid)
+    if tracked == 0:
+        return None, None
 
-    tracked = advancers + decliners + flats
-    adv_pct = (advancers / tracked * 100) if tracked else None
-    dec_pct = (decliners / tracked * 100) if tracked else None
-
-    return adv_pct, dec_pct
+    advancers = int((valid > 0).sum())
+    decliners = int((valid < 0).sum())
+    return (advancers / tracked * 100, decliners / tracked * 100)
 
 
 def _fetch_fear_greed_history() -> List[ValuePoint]:

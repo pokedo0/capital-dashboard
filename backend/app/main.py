@@ -1,6 +1,8 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, timedelta
 import logging
 from logging.config import dictConfig
+import threading
 from typing import List
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -102,12 +104,29 @@ app.add_middleware(
 )
 
 
-def _refresh_history(symbols: List[str], years: int = 5) -> None:
+def _refresh_one_symbol(symbol: str, start: date, end: date) -> None:
+    """Download and store history for a single symbol in its own session."""
+    try:
+        with session_scope() as session:
+            fetch_and_store(session, symbol, start, end)
+    except Exception as exc:  # pragma: no cover
+        logger.warning("Startup download failed for %s: %s", symbol, exc)
+
+
+def _refresh_history(symbols: List[str], years: int = 5, max_workers: int = 6) -> None:
     start = date.today() - timedelta(days=365 * years)
     end = date.today()
-    with session_scope() as session:
-        for symbol in symbols:
-            fetch_and_store(session, symbol, start, end)
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {
+            pool.submit(_refresh_one_symbol, symbol, start, end): symbol
+            for symbol in symbols
+        }
+        for future in as_completed(futures):
+            symbol = futures[future]
+            try:
+                future.result()
+            except Exception as exc:  # pragma: no cover
+                logger.warning("Startup download error for %s: %s", symbol, exc)
 
 
 def clear_all_caches(source: str = "unknown") -> None:
@@ -142,11 +161,14 @@ def daily_refresh_job() -> None:
     clear_all_caches(source="scheduler")
 
 
-@app.on_event("startup")
-def on_startup() -> None:
-    init_db()
-    _refresh_history(
-        list(
+# Track whether initial data loading has finished
+_startup_ready = threading.Event()
+
+
+def _background_startup() -> None:
+    """Heavy startup work: download history + load ETF CSV.  Runs in a daemon thread."""
+    try:
+        all_symbols = list(
             dict.fromkeys(
                 settings.yahoo_batch_symbols
                 + settings.mag7_symbols
@@ -154,10 +176,25 @@ def on_startup() -> None:
                 + ["SPY", "QQQ"]
             )
         )
-    )
-    # Load leveraged ETF data from CSV
-    with session_scope() as session:
-        fetch_and_store_leveraged_etf_data(session)
+        _refresh_history(all_symbols)
+        # Load leveraged ETF data from CSV
+        with session_scope() as session:
+            fetch_and_store_leveraged_etf_data(session)
+        logger.info("Background startup finished – all data loaded.")
+    except Exception as exc:  # pragma: no cover
+        logger.error("Background startup error: %s", exc)
+    finally:
+        _startup_ready.set()
+
+
+@app.on_event("startup")
+def on_startup() -> None:
+    init_db()
+    # Kick off heavy data loading in a daemon thread so the server is
+    # immediately responsive.  The API endpoints can serve data as soon
+    # as their own caches are warm.
+    t = threading.Thread(target=_background_startup, daemon=True, name="startup-loader")
+    t.start()
     # 美东时间 16:15（刚收盘后）跑一次增量刷新
     scheduler.add_job(daily_refresh_job, "cron", day_of_week="mon-fri", hour=16, minute=15)
     # 美东时间 18:00（夜盘/盘后时段开始后）再跑一次，覆盖盘后数据
@@ -169,6 +206,12 @@ def on_startup() -> None:
 def on_shutdown() -> None:
     if scheduler.running:
         scheduler.shutdown()
+
+
+@app.get("/api/health")
+def api_health() -> dict:
+    """Lightweight health-check that also reports startup readiness."""
+    return {"status": "ok", "ready": _startup_ready.is_set()}
 
 
 @app.get("/api/time-ranges")

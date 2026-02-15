@@ -1,23 +1,27 @@
 <script setup lang="ts">
+import { defineAsyncComponent, ref } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
+import { clearApiCache, fetchRealtimeMarketSummary } from './services/api';
+
+// Above-the-fold: eagerly loaded for instant first paint
 import MarketHeader from './components/MarketHeader.vue';
 import MarketStatsRow from './components/MarketStatsRow.vue';
 import Sp500PriceVolumeChart from './components/Sp500PriceVolumeChart.vue';
 import SectorTable from './components/SectorTable.vue';
-import Mag7RelativeChart from './components/Mag7RelativeChart.vue';
-import Mag7HistogramPerformance from './components/Mag7HistogramPerformance.vue';
-import MultiAssetComparisonChart from './components/MultiAssetComparisonChart.vue';
-import SectorComparisonChart from './components/SectorComparisonChart.vue';
-import CustomAssetDashboard from './components/CustomAssetDashboard.vue';
-import LeveragedETFCalculator from './components/LeveragedETFCalculator.vue';
-import DrawdownChart from './components/DrawdownChart.vue';
-import RelativeComparisonChart from './components/RelativeComparisonChart.vue';
-import FearGreedComparisonChart from './components/FearGreedComparisonChart.vue';
-import MarketBreadthChart from './components/MarketBreadthChart.vue';
-import SpForwardPeChart from './components/SpForwardPeChart.vue';
-import SpyRspRatioChart from './components/SpyRspRatioChart.vue';
-import { clearApiCache, fetchRealtimeMarketSummary } from './services/api';
-import { ref } from 'vue';
+
+// Below-the-fold: lazy-loaded (code-split) for faster initial page load
+const Mag7RelativeChart = defineAsyncComponent(() => import('./components/Mag7RelativeChart.vue'));
+const Mag7HistogramPerformance = defineAsyncComponent(() => import('./components/Mag7HistogramPerformance.vue'));
+const MultiAssetComparisonChart = defineAsyncComponent(() => import('./components/MultiAssetComparisonChart.vue'));
+const SectorComparisonChart = defineAsyncComponent(() => import('./components/SectorComparisonChart.vue'));
+const CustomAssetDashboard = defineAsyncComponent(() => import('./components/CustomAssetDashboard.vue'));
+const LeveragedETFCalculator = defineAsyncComponent(() => import('./components/LeveragedETFCalculator.vue'));
+const DrawdownChart = defineAsyncComponent(() => import('./components/DrawdownChart.vue'));
+const RelativeComparisonChart = defineAsyncComponent(() => import('./components/RelativeComparisonChart.vue'));
+const FearGreedComparisonChart = defineAsyncComponent(() => import('./components/FearGreedComparisonChart.vue'));
+const MarketBreadthChart = defineAsyncComponent(() => import('./components/MarketBreadthChart.vue'));
+const SpForwardPeChart = defineAsyncComponent(() => import('./components/SpForwardPeChart.vue'));
+const SpyRspRatioChart = defineAsyncComponent(() => import('./components/SpyRspRatioChart.vue'));
 
 const nasdaqBreadthOptions = [
   { value: '$NDTW', label: '$NDTW Above 20-Day' },

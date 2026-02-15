@@ -130,7 +130,7 @@ def _get_batch_realtime_quotes(symbols: List[str]) -> Dict[str, Dict]:
 def _fetch_realtime_constituents_changes(url: str) -> Tuple[Optional[float], Optional[float]]:
     """
     Fetch constituents CSV and calculate advance/decline percentages.
-    This still uses CSV as source but could be enhanced with realtime data.
+    Uses vectorized pandas operations for speed.
     """
     import requests
     from io import StringIO
@@ -146,29 +146,21 @@ def _fetch_realtime_constituents_changes(url: str) -> Tuple[Optional[float], Opt
     if "Symbol" not in df.columns or "Chg" not in df.columns:
         return None, None
     
-    total = len(df)
-    if total == 0:
+    if len(df) == 0:
         return None, None
     
-    advancers = decliners = flats = 0
-    for _, row in df.iterrows():
-        try:
-            chg_str = str(row.get("Chg", "0")).strip().replace("(", "").replace(")", "").replace("%", "")
-            chg_val = float(chg_str) if chg_str else 0
-        except (ValueError, TypeError):
-            continue
-            
-        if chg_val > 0:
-            advancers += 1
-        elif chg_val < 0:
-            decliners += 1
-        else:
-            flats += 1
-    
-    tracked = advancers + decliners + flats
+    # Vectorized: coerce Chg column to numeric, dropping non-parseable rows
+    chg = pd.to_numeric(
+        df["Chg"].astype(str).str.replace(r"[()%]", "", regex=True),
+        errors="coerce",
+    )
+    valid = chg.dropna()
+    tracked = len(valid)
     if tracked == 0:
         return None, None
         
+    advancers = int((valid > 0).sum())
+    decliners = int((valid < 0).sum())
     return (advancers / tracked * 100, decliners / tracked * 100)
 
 
