@@ -10,13 +10,15 @@ authors = [{name = "Codex Agent", email = "codex@example.com"}]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "fastapi>=0.115.5",
-    "uvicorn[standard]>=0.32.0",
-    "sqlmodel>=0.0.21",
-    "pydantic>=2.9.2",
-    "pandas>=2.2.3",
+    "fastapi>=0.129.0",
+    "uvicorn[standard]>=0.40.0",
+    "sqlmodel>=0.0.33",
+    "pydantic>=2.12.5",
+    "pandas>=3.0.0",
     "yfinance>=1.1.0",
-    "apscheduler>=3.10.4",
+    "apscheduler>=3.11.2",
+    "curl-cffi>=0.14.0",
+    "barchart_api>=0.12.4",
 ]
 
 [project.optional-dependencies]
