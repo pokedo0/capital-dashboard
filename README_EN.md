@@ -105,6 +105,10 @@ The system automatically switches data sources based on Eastern Time:
 
 **Automatic DST Handling**: Uses Python standard library `zoneinfo` for proper EST/EDT transitions
 
+### ⚠️ Regional Access Restrictions
+
+Some data sources (e.g., MacroMicro) can be accessed freely from US nodes, but may be blocked by Cloudflare verification when accessed from non-US regions (such as HK nodes), causing Forward P/E and related data fetching to fail. It is recommended to deploy on US nodes, or configure a proxy for these requests.
+
 ## Directory Structure
 
 ```

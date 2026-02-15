@@ -105,6 +105,10 @@ with urlopen(request, timeout=10) as response:
 
 **夏令时自动处理**: 使用 Python 标准库 `zoneinfo` 正确处理 EST/EDT 切换
 
+### ⚠️ 地区访问限制
+
+部分数据源（如 MacroMicro 财经M平方）在 US 节点可正常访问，但在 HK 等非美地区节点可能会被 Cloudflare 人机验证拦截，导致 Forward P/E 等数据获取失败。建议优先选择 US 节点部署，或为相关请求配置代理。
+
 ## 目录结构
 
 ```
